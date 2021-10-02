@@ -5,24 +5,36 @@
 
 #define DURATION 10
 
-class Door {
-private:
-    Motor* motorA;
-    Motor* motorB;
-    int duration;
-    bool closing;
-    bool opening;
-    void runTimer();
+namespace dr {
 
-public:
-    void prepare();
-    void open();
-    void close();
-    bool isOpening();
-    bool isClosing();
-    bool isOpened();
-    bool isClosed();
-    ~Door();
-};
+    enum DoorState {
+        OPENED,
+        CLOSED
+    };
+
+    class Door {
+    private:
+        mtr::Motor* motorA;
+        mtr::Motor* motorB;
+        int duration = 0;
+        bool closing = false;
+        bool opening = false;
+        bool closed = true;
+        bool opened = false;
+        dr::DoorState state;
+        void runTimer();
+
+    public:
+        Door(dr::DoorState);
+        void init();
+        void open();
+        void close();
+        bool isOpening();
+        bool isClosing();
+        bool isOpened();
+        bool isClosed();
+        ~Door();
+    };
+}
 
 #endif

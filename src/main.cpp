@@ -4,15 +4,13 @@
 #include <BLEScan.h>
 #include <BLEUtils.h>
 
+#include "door.h"
+
 using namespace std;
 
 #define LONG_SCAN_DURATION 10
 #define SHORT_SCAN_DURATION 1
 #define RSSI_THRESHOLD -70
-#define MOTOR_A_T1 32
-#define MOTOR_A_T2 33
-#define MOTOR_B_T1 34
-#define MOTOR_B_T2 35
 
 const string KNOWN_DEVICES[] = {
     "4c000215337cd77911c84c029a9bdaa11804b6bf00000000bf",
@@ -22,6 +20,7 @@ int scanDuration = LONG_SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
 BLEScan *scan;
+dr::Door *door;
 
 bool isKnownDevicesInRange(int, string);
 char *getManufacturerData(string);
@@ -44,24 +43,17 @@ char *getManufacturerData(string data) {
 }
 
 void openDoor() {
-    if (!isDoorOpen) {
-        isDoorOpen = true;
-        digitalWrite(MOTOR_A_T1, HIGH);
-        digitalWrite(MOTOR_A_T2, LOW);
-        digitalWrite(MOTOR_B_T1, HIGH);
-        digitalWrite(MOTOR_B_T2, LOW);
+    Serial.println(door->isClosed());
+    if (door->isClosed()) {
+        door->open();
         scanDuration = SHORT_SCAN_DURATION;
-        Serial.println("SLIDE UP");
+        Serial.println("SLIDE DOWN");
     }
 }
 
 void closeDoor() {
-    if (isDoorOpen) {
-        isDoorOpen = false;
-        digitalWrite(MOTOR_A_T1, HIGH);
-        digitalWrite(MOTOR_A_T2, LOW);
-        digitalWrite(MOTOR_B_T1, HIGH);
-        digitalWrite(MOTOR_B_T2, LOW);
+    if (door->isOpened()) {
+        door->close();
         scanDuration = LONG_SCAN_DURATION;
         Serial.println("SLIDE DOWN");
     }
@@ -80,12 +72,12 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         if (isKnownDevicesInRange(rssi, hex)) {
             isDeviceFound = true;
             openDoor();
-            Serial.println(mac.c_str());
+            // Serial.println(mac.c_str());
             // Serial.println(name.c_str());
             // Serial.println(id.c_str());
         }
-        Serial.println(rssi);
-        Serial.println(hex);
+        // Serial.println(rssi);
+        // Serial.println(hex);
     }
 };
 
@@ -93,6 +85,8 @@ void setup() {
     Serial.begin(115200);
     pinMode(GPIO_NUM_32, OUTPUT);
     BLEDevice::init("ESP32-38");
+    door = new dr::Door(dr::CLOSED);
+    door->init();
     scan = BLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(new ScanCallback());
     scan->setActiveScan(true);

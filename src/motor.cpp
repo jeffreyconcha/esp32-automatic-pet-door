@@ -2,10 +2,7 @@
 
 #include <Arduino.h>
 
-MotorSelection selection;
-int terminal1, terminal2;
-
-Motor::Motor(MotorSelection input) {
+mtr::Motor::Motor(MotorSelection input) {
     selection = input;
     switch (input) {
     case MOTOR_A:
@@ -18,26 +15,27 @@ Motor::Motor(MotorSelection input) {
         break;
     }
 }
-void initialize() {
+
+void mtr::Motor::init() {
     pinMode(terminal1, OUTPUT);
     pinMode(terminal2, OUTPUT);
 }
 
-void forward() {
+void mtr::Motor::forward() {
     digitalWrite(terminal1, HIGH);
     digitalWrite(terminal2, LOW);
 }
 
-void reverse() {
+void mtr::Motor::reverse() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, HIGH);
 }
 
-void stop() {
+void mtr::Motor::stop() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, LOW);
 }
 
-MotorSelection getSelection() {
+mtr::MotorSelection mtr::Motor::getSelection() {
     return selection;
 }

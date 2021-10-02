@@ -1,62 +1,79 @@
 #include "door.h"
-#include "motor.h"
 
 #include <Arduino.h>
 
-bool opening = false;
-bool closing = false;
-int duration = 0;
-Motor* motorA;
-Motor* motorB;
+#include "motor.h"
 
-void runTimer() {
+dr::Door::Door(dr::DoorState _state) {
+    state = _state;
+}
+
+void dr::Door::runTimer() {
     while (duration < DURATION) {
         delay(1000);
         duration++;
     }
     duration = 0;
+    motorA->stop();
+    motorB->stop();
 }
 
-void prepare() {
-    motorA = new Motor(MOTOR_A);
-    motorB = new Motor(MOTOR_B);
-    motorA->initialize();
-    motorB->initialize();
+void dr::Door::init() {
+    motorA = new mtr::Motor(mtr::MotorSelection::MOTOR_A);
+    motorB = new mtr::Motor(mtr::MotorSelection::MOTOR_B);
+    motorA->init();
+    motorB->init();
+    switch (state) {
+    case OPENED:
+        open();
+        break;
+    case CLOSED:
+        close();
+        break;
+    }
 }
 
-void open() {
-    opening = true;
-    motorA->forward();
-    motorB->forward();
-    runTimer();
-    opening = false;
+void dr::Door::open() {
+    if (!opened && !opening) {
+        opening = true;
+        motorA->forward();
+        motorB->forward();
+        runTimer();
+        opening = false;
+        opened = true;
+        closed = false;
+    }
 }
 
-void close() {
-    closing = true;
-    motorA->reverse();
-    motorB->reverse();
-    runTimer();
-    closing = false;
+void dr::Door::close() {
+    if (!closed && !closing) {
+        closing = true;
+        motorA->reverse();
+        motorB->reverse();
+        runTimer();
+        closing = false;
+        closed = true;
+        opened = false;
+    }
 }
 
-bool isOpening() {
+bool dr::Door::isOpening() {
     return opening;
 }
 
-bool isClosing() {
+bool dr::Door::isClosing() {
     return closing;
 }
 
-bool isOpened() {
-    return true;
+bool dr::Door::isOpened() {
+    return !opening && opened;
 }
 
-bool isClosed() {
-    return true;
+bool dr::Door::isClosed() {
+    return !closing && closed;
 }
 
-Door::~Door() {
+dr::Door::~Door() {
     delete motorA;
     delete motorB;
 }
