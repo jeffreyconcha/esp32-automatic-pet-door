@@ -9,6 +9,10 @@ using namespace std;
 #define LONG_SCAN_DURATION 10
 #define SHORT_SCAN_DURATION 1
 #define RSSI_THRESHOLD -70
+#define MOTOR_A_T1 32
+#define MOTOR_A_T2 33
+#define MOTOR_B_T1 34
+#define MOTOR_B_T2 35
 
 const string KNOWN_DEVICES[] = {
     "4c000215337cd77911c84c029a9bdaa11804b6bf00000000bf",
@@ -42,7 +46,10 @@ char *getManufacturerData(string data) {
 void openDoor() {
     if (!isDoorOpen) {
         isDoorOpen = true;
-        digitalWrite(GPIO_NUM_32, HIGH);
+        digitalWrite(MOTOR_A_T1, HIGH);
+        digitalWrite(MOTOR_A_T2, LOW);
+        digitalWrite(MOTOR_B_T1, HIGH);
+        digitalWrite(MOTOR_B_T2, LOW);
         scanDuration = SHORT_SCAN_DURATION;
         Serial.println("SLIDE UP");
     }
@@ -51,7 +58,10 @@ void openDoor() {
 void closeDoor() {
     if (isDoorOpen) {
         isDoorOpen = false;
-        digitalWrite(GPIO_NUM_32, LOW);
+        digitalWrite(MOTOR_A_T1, HIGH);
+        digitalWrite(MOTOR_A_T2, LOW);
+        digitalWrite(MOTOR_B_T1, HIGH);
+        digitalWrite(MOTOR_B_T2, LOW);
         scanDuration = LONG_SCAN_DURATION;
         Serial.println("SLIDE DOWN");
     }
