@@ -9,11 +9,12 @@ dr::Door::Door(dr::DoorState _state) {
 }
 
 void dr::Door::runTimer() {
-    while (duration < DURATION) {
-        delay(1000);
-        duration++;
-    }
-    duration = 0;
+    // while (duration < DURATION) {
+    //     delay(1000);
+    //     duration++;
+    // }
+    // duration = 0;
+    delay(1000);
     motorA->stop();
     motorB->stop();
 }

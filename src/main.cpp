@@ -8,15 +8,13 @@
 
 using namespace std;
 
-#define LONG_SCAN_DURATION 10
-#define SHORT_SCAN_DURATION 1
-#define RSSI_THRESHOLD -70
+#define SCAN_DURATION 5
+#define RSSI_THRESHOLD -65
 
-const string KNOWN_DEVICES[] = {
-    "4c000215337cd77911c84c029a9bdaa11804b6bf00000000bf",
-    "4c0002154853b0e46c144ba996bf65b301407b1b00000000b0"};
+const string KNOWN_DEVICE_ADDRESSES[] = {
+    "ff:ff:aa:05:68:d6"};
 
-int scanDuration = LONG_SCAN_DURATION;
+int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
 BLEScan *scan;
@@ -27,35 +25,27 @@ char *getManufacturerData(string);
 void openDoor();
 void closeDoor();
 
-bool isKnownDevicesInRange(int rssi, string identifier) {
-    if (rssi >= RSSI_THRESHOLD) {
-        for (int i = 0; i < sizeof(KNOWN_DEVICES); i++) {
-            if (KNOWN_DEVICES[i] == identifier) {
-                return true;
-            }
+bool isKnownDevicesInRange(string identifier) {
+    for (int i = 0; i < sizeof(KNOWN_DEVICE_ADDRESSES); i++) {
+        if (KNOWN_DEVICE_ADDRESSES[i] == identifier) {
+            return true;
         }
     }
     return false;
 }
 
-char *getManufacturerData(string data) {
-    return BLEUtils::buildHexData(nullptr, (uint8_t *)data.data(), data.length());
-}
-
 void openDoor() {
     Serial.println(door->isClosed());
     if (door->isClosed()) {
+        Serial.println("OPENING DOOR");
         door->open();
-        scanDuration = SHORT_SCAN_DURATION;
-        Serial.println("SLIDE DOWN");
     }
 }
 
 void closeDoor() {
     if (door->isOpened()) {
+        Serial.println("CLOSING");
         door->close();
-        scanDuration = LONG_SCAN_DURATION;
-        Serial.println("SLIDE DOWN");
     }
 }
 
@@ -68,16 +58,15 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         string mac = address.toString();
         string id = uuid.toString();
         string data = device.getManufacturerData();
-        char *hex = getManufacturerData(data);
-        if (isKnownDevicesInRange(rssi, hex)) {
-            isDeviceFound = true;
-            openDoor();
-            // Serial.println(mac.c_str());
-            // Serial.println(name.c_str());
-            // Serial.println(id.c_str());
+        if (isKnownDevicesInRange(mac)) {
+            if (rssi >= RSSI_THRESHOLD) {
+                isDeviceFound = true;
+                openDoor();
+            }
+            Serial.println(mac.c_str());
+            Serial.println(name.c_str());
+            Serial.println(rssi);
         }
-        // Serial.println(rssi);
-        // Serial.println(hex);
     }
 };
 
@@ -96,11 +85,16 @@ void setup() {
 
 void loop() {
     Serial.println("SCAN");
-    scan->start(scanDuration, false);
+    scan->start(SCAN_DURATION, false);
     if (!isDeviceFound) {
         closeDoor();
     } else {
         isDeviceFound = false;
+    }
+    if (door->isOpened()) {
+        Serial.println("DOOR IS OPEN");
+    } else {
+        Serial.println("DOOR IS CLOSED");
     }
     scan->clearResults();
 }
