@@ -81,7 +81,6 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
     Serial.begin(115200);
-    pinMode(GPIO_NUM_32, OUTPUT);
     BLEDevice::init("ESP32-38");
     door = new dr::Door(dr::CLOSED);
     door->init();

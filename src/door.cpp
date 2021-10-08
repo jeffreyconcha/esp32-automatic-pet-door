@@ -8,22 +8,12 @@ dr::Door::Door(dr::DoorState _state) {
     state = _state;
 }
 
-void dr::Door::runTimer() {
-    // while (duration < DURATION) {
-    //     delay(1000);
-    //     duration++;
-    // }
-    // duration = 0;
-    delay(1000);
-    motorA->stop();
-    motorB->stop();
-}
-
 void dr::Door::init() {
     motorA = new mtr::Motor(mtr::MotorSelection::MOTOR_A);
     motorB = new mtr::Motor(mtr::MotorSelection::MOTOR_B);
     motorA->init();
     motorB->init();
+    pinMode(STOP_T, INPUT_PULLUP);
     switch (state) {
     case OPENED:
         open();
@@ -39,7 +29,10 @@ void dr::Door::open() {
         opening = true;
         motorA->forward();
         motorB->forward();
-        runTimer();
+        while(digitalRead(STOP_T) == HIGH) {
+            Serial.println("**OPENING**");
+        }
+        stop();
         opening = false;
         opened = true;
         closed = false;
@@ -51,11 +44,19 @@ void dr::Door::close() {
         closing = true;
         motorA->reverse();
         motorB->reverse();
-        runTimer();
+        while(digitalRead(STOP_T) == HIGH) {
+            Serial.println("**CLOSING**");
+        }
+        stop();
         closing = false;
         closed = true;
         opened = false;
     }
+}
+
+void dr::Door::stop() {
+    motorA->stop();
+    motorB->stop();
 }
 
 bool dr::Door::isOpening() {

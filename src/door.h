@@ -3,7 +3,7 @@
 #ifndef DOOR_H
 #define DOOR_H
 
-#define DURATION 10
+#define STOP_T 0
 
 namespace dr {
 
@@ -22,13 +22,13 @@ namespace dr {
         bool closed = true;
         bool opened = false;
         dr::DoorState state;
-        void runTimer();
 
     public:
         Door(dr::DoorState);
         void init();
         void open();
         void close();
+        void stop();
         bool isOpening();
         bool isClosing();
         bool isOpened();
