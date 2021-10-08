@@ -59,7 +59,6 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         string mac = address.toString();
         if (isDeviceRegistered(mac)) {
             if (rssi >= RSSI_THRESHOLD) {
-                devices[mac] = rssi;
                 isDeviceFound = true;
                 Serial.println("DEVICE FOUND STOPPING SCAN...");
                 scan->stop();
@@ -72,6 +71,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
                     }
                 }
             }
+            devices[mac] = rssi;
             // Serial.println(mac.c_str());
             // Serial.println(name.c_str());
             // Serial.println(rssi);
