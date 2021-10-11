@@ -19,21 +19,26 @@ mtr::Motor::Motor(MotorSelection input) {
 void mtr::Motor::init() {
     pinMode(terminal1, OUTPUT);
     pinMode(terminal2, OUTPUT);
+    ledcSetup(CHANNEL, FREQUENCY, RESOLUTION);
+    ledcAttachPin(MOTOR_EN_AB, CHANNEL);
 }
 
 void mtr::Motor::forward() {
     digitalWrite(terminal1, HIGH);
     digitalWrite(terminal2, LOW);
+    ledcWrite(CHANNEL, 100);
 }
 
 void mtr::Motor::reverse() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, HIGH);
+    ledcWrite(CHANNEL, 100);
 }
 
 void mtr::Motor::stop() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, LOW);
+    ledcWrite(CHANNEL, 0);
 }
 
 mtr::MotorSelection mtr::Motor::getSelection() {
