@@ -29,10 +29,10 @@ void dr::Door::open() {
         opening = true;
         motorA->forward();
         motorB->forward();
-        while(digitalRead(STOP_T) == HIGH) {
+        do {
             Serial.println("**OPENING**");
             delay(100);
-        }
+        } while (digitalRead(STOP_T) == HIGH);
         stop();
         opened = true;
         closed = false;
@@ -44,10 +44,10 @@ void dr::Door::close() {
         closing = true;
         motorA->reverse();
         motorB->reverse();
-        while(digitalRead(STOP_T) == HIGH) {
+        do {
             Serial.println("**CLOSING**");
             delay(100);
-        }
+        } while (digitalRead(STOP_T) == HIGH);
         stop();
         closed = true;
         opened = false;

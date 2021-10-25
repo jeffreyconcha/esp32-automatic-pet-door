@@ -6,25 +6,27 @@
 
 #include <map>
 
+#include "device.h"
 #include "door.h"
 
 using namespace std;
 
 #define SCAN_DURATION 10
-#define RSSI_THRESHOLD -70
 
 const string KNOWN_DEVICE_ADDRESSES[] = {
-    "ff:ff:aa:05:68:d6"};
+    "ff:ff:aa:05:68:d6",
+    "ff:ff:bb:b8:a3:3c",
+    "ff:ff:bb:07:7b:07"};
 
+std::map<string, dvc::Device*> devices;
 int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
-std::map<string, int> devices;
 BLEScan* scan;
 dr::Door* door;
 
 bool isKnownDevicesInRange(int, string);
-char* getManufacturerData(string);
+bool allDevicesOutOfRange();
 void openDoor();
 void closeDoor();
 
@@ -54,33 +56,45 @@ void closeDoor() {
 class ScanCallback : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice ads) {
         BLEAddress address = ads.getAddress();
-        string name = ads.getName();
-        int rssi = ads.getRSSI();
         string mac = address.toString();
+        int rssi = ads.getRSSI();
         if (isDeviceRegistered(mac)) {
-            if (rssi >= RSSI_THRESHOLD) {
+            if (devices.find(mac) == devices.end()) {
+                devices[mac] = new dvc::Device(mac);
+            }
+            dvc::Device* device = devices[mac];
+            device->setRssi(rssi);
+            if (device->inRange()) {
                 isDeviceFound = true;
-                Serial.println("DEVICE FOUND STOPPING SCAN...");
                 scan->stop();
+                Serial.println("DEVICE FOUND STOPPING SCAN...");
             } else {
-                if (devices.find(mac) != devices.end()) {
-                    if (devices[mac] >= RSSI_THRESHOLD) {
-                        isDeviceFound = false;
-                        Serial.println("DEVICE GOES OUT OF RANGE");
-                        scan->stop();
-                    }
+                if (allDevicesOutOfRange()) {
+                    isDeviceFound = false;
+                    scan->stop();
+                    Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
                 }
             }
-            devices[mac] = rssi;
-            // Serial.println(mac.c_str());
-            // Serial.println(name.c_str());
-            // Serial.println(rssi);
+            Serial.print(mac.c_str());
+            Serial.print(" @ ");
+            Serial.println(rssi);
         }
     }
 };
 
+bool allDevicesOutOfRange() {
+    for (auto const& p : devices) {
+        dvc::Device* device = p.second;
+        if (device->isTryValid()) {
+            return true;
+        }
+    }
+    return true;
+}
+
 void setup() {
     Serial.begin(115200);
+    Serial.println("SETUP...");
     BLEDevice::init("ESP32-38");
     door = new dr::Door(dr::CLOSED);
     door->init();
