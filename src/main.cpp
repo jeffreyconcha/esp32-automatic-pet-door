@@ -8,6 +8,7 @@
 
 #include "device.h"
 #include "door.h"
+#include "ultrasonic.h"
 
 using namespace std;
 
@@ -22,8 +23,9 @@ std::map<string, dvc::Device*> devices;
 int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
-BLEScan* scan;
+ult::UltraSonic* proximity;
 dr::Door* door;
+BLEScan* scan;
 
 bool isKnownDevicesInRange(int, string);
 bool allDevicesOutOfRange();
@@ -86,9 +88,10 @@ bool allDevicesOutOfRange() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
         if (device->isTryValid()) {
-            return true;
+            return false;
         }
     }
+    devices.clear();
     return true;
 }
 
@@ -98,6 +101,8 @@ void setup() {
     BLEDevice::init("ESP32-38");
     door = new dr::Door(dr::CLOSED);
     door->init();
+    proximity = new ult::UltraSonic();
+    proximity->init();
     scan = BLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(new ScanCallback());
     scan->setActiveScan(true);
@@ -108,6 +113,7 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
+    proximity->readDistance();
     if (isDeviceFound) {
         openDoor();
         isDeviceFound = false;
