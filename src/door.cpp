@@ -4,8 +4,9 @@
 
 #include "motor.h"
 
-dr::Door::Door(dr::DoorState _state) {
+dr::Door::Door(dr::DoorState _state, ult::UltraSonic* _proximity) {
     state = _state;
+    proximity = _proximity;
 }
 
 void dr::Door::init() {
@@ -29,10 +30,12 @@ void dr::Door::open() {
         opening = true;
         motorA->forward();
         motorB->forward();
+        timeCounter = 0;
         do {
             Serial.println("**OPENING**");
-            delay(100);
-        } while (digitalRead(STOP_T) == HIGH);
+            delay(TIME_DELAY);
+            timeCounter++;
+        } while (digitalRead(STOP_T) == HIGH && !isTimeExpired());
         stop();
         opened = true;
         closed = false;
@@ -44,13 +47,21 @@ void dr::Door::close() {
         closing = true;
         motorA->reverse();
         motorB->reverse();
+        bool isClear = proximity->isClear();
+        timeCounter = 0;
         do {
             Serial.println("**CLOSING**");
-            delay(100);
-        } while (digitalRead(STOP_T) == HIGH);
+            isClear = proximity->isClear();
+            delay(TIME_DELAY);
+            timeCounter++;
+        } while (digitalRead(STOP_T) == HIGH && !isTimeExpired() && isClear);
         stop();
-        closed = true;
         opened = false;
+        if (!isClear) {
+            open();
+            return;
+        }
+        closed = true;
     }
 }
 
@@ -59,6 +70,10 @@ void dr::Door::stop() {
     motorB->stop();
     opening = false;
     closing = false;
+}
+
+bool dr::Door::isTimeExpired() {
+    return timeCounter * TIME_DELAY >= MAX_TIME;
 }
 
 bool dr::Door::isOpening() {

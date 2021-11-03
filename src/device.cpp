@@ -25,7 +25,7 @@ bool dvc::Device::inRange() {
     return rssi >= RSSI_THRESHOLD;
 }
 
-bool dvc::Device::isTryValid() {
+bool dvc::Device::hasChance() {
     return withinRange && counter <= MAX_OOR_COUNT;
 }
 

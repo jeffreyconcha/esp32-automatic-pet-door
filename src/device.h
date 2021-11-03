@@ -18,7 +18,7 @@ namespace dvc {
         Device(std::string);
         void setRssi(int);
         bool inRange();
-        bool isTryValid();
+        bool hasChance();
         std::string getMac();
         int getRssi();
     };

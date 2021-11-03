@@ -8,6 +8,8 @@ void ult::UltraSonic::init() {
 }
 
 float ult::UltraSonic::readDistance() {
+    digitalWrite(TRIGGER_PIN, LOW);
+    delayMicroseconds(2);
     digitalWrite(TRIGGER_PIN, HIGH);
     delayMicroseconds(10);
     digitalWrite(TRIGGER_PIN, LOW);
@@ -16,4 +18,9 @@ float ult::UltraSonic::readDistance() {
     Serial.print("DISTANCE (cm): ");
     Serial.println(distance);
     return distance;
+}
+
+bool ult::UltraSonic::isClear() {
+    float distance = readDistance();
+    return distance <= MIN_DISTANCE || distance >= MAX_DISTANCE;
 }

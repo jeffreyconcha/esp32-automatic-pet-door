@@ -87,7 +87,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
 bool allDevicesOutOfRange() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
-        if (device->isTryValid()) {
+        if (device->hasChance()) {
             return false;
         }
     }
@@ -97,12 +97,12 @@ bool allDevicesOutOfRange() {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("SETUP...");
+    Serial.println("INITIALIZING...");
     BLEDevice::init("ESP32-38");
-    door = new dr::Door(dr::CLOSED);
-    door->init();
     proximity = new ult::UltraSonic();
     proximity->init();
+    door = new dr::Door(dr::CLOSED, proximity);
+    door->init();
     scan = BLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(new ScanCallback());
     scan->setActiveScan(true);
@@ -118,7 +118,9 @@ void loop() {
         openDoor();
         isDeviceFound = false;
     } else {
-        closeDoor();
+        if (proximity->isClear()) {
+            closeDoor();
+        }
     }
     if (door->isOpened()) {
         Serial.println("** DOOR IS OPEN **");

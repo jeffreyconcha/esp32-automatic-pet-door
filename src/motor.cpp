@@ -26,13 +26,13 @@ void mtr::Motor::init() {
 void mtr::Motor::forward() {
     digitalWrite(terminal1, HIGH);
     digitalWrite(terminal2, LOW);
-    ledcWrite(CHANNEL, 100);
+    ledcWrite(CHANNEL, 125);
 }
 
 void mtr::Motor::reverse() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, HIGH);
-    ledcWrite(CHANNEL, 100);
+    ledcWrite(CHANNEL, 125);
 }
 
 void mtr::Motor::stop() {
