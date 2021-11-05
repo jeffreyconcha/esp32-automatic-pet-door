@@ -4,7 +4,7 @@
 #define DEVICE_H
 
 #define MAX_OOR_COUNT 3
-#define RSSI_THRESHOLD -75
+#define RSSI_THRESHOLD -85
 
 namespace dvc {
     class Device {

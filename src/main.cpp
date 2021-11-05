@@ -113,7 +113,6 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
-    proximity->readDistance();
     if (isDeviceFound) {
         openDoor();
         isDeviceFound = false;
