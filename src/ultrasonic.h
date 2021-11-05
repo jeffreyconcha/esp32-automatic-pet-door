@@ -5,7 +5,7 @@
 #define ECHO_PIN 33
 #define SPEED_OF_SOUND 0.034
 #define MIN_DISTANCE 45
-#define MAX_DISTANCE 50
+#define MAX_DISTANCE 55
 
 namespace ult {
     class UltraSonic {
