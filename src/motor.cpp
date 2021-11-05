@@ -23,16 +23,16 @@ void mtr::Motor::init() {
     ledcAttachPin(MOTOR_EN_AB, CHANNEL);
 }
 
-void mtr::Motor::forward() {
+void mtr::Motor::forward(int speed) {
     digitalWrite(terminal1, HIGH);
     digitalWrite(terminal2, LOW);
-    ledcWrite(CHANNEL, 125);
+    ledcWrite(CHANNEL, speed);
 }
 
-void mtr::Motor::reverse() {
+void mtr::Motor::reverse(int speed) {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, HIGH);
-    ledcWrite(CHANNEL, 125);
+    ledcWrite(CHANNEL, speed);
 }
 
 void mtr::Motor::stop() {

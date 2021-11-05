@@ -27,8 +27,8 @@ namespace mtr {
         Motor(mtr::MotorSelection);
         MotorSelection getSelection();
         void init();
-        void forward();
-        void reverse();
+        void forward(int);
+        void reverse(int);
         void stop();
     };
 }

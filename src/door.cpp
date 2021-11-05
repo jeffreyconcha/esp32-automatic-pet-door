@@ -28,14 +28,19 @@ void dr::Door::init() {
 void dr::Door::open() {
     if (!opened && !opening) {
         opening = true;
-        motorA->forward();
-        motorB->forward();
+        if (isStopperEnabled()) {
+            motorA->forward(75);
+            motorB->forward(75);
+            delay(500);
+        }
+        motorA->forward(125);
+        motorB->forward(125);
         timeCounter = 0;
-        do {
+        while (!isStopperEnabled() && !isTimeExpired()) {
             Serial.println("**OPENING**");
             delay(TIME_DELAY);
             timeCounter++;
-        } while (digitalRead(STOP_T) == HIGH && !isTimeExpired());
+        }
         stop();
         opened = true;
         closed = false;
@@ -45,16 +50,21 @@ void dr::Door::open() {
 void dr::Door::close() {
     if (!closed && !closing) {
         closing = true;
-        motorA->reverse();
-        motorB->reverse();
+        if (isStopperEnabled()) {
+            motorA->reverse(75);
+            motorB->reverse(75);
+            delay(500);
+        }
+        motorA->reverse(75);
+        motorB->reverse(75);
         bool isClear = proximity->isClear();
         timeCounter = 0;
-        do {
+        while (!isStopperEnabled() && !isTimeExpired() && isClear) {
             Serial.println("**CLOSING**");
             isClear = proximity->isClear();
             delay(TIME_DELAY);
             timeCounter++;
-        } while (digitalRead(STOP_T) == HIGH && !isTimeExpired() && isClear);
+        }
         stop();
         opened = false;
         if (!isClear) {
@@ -90,6 +100,10 @@ bool dr::Door::isOpened() {
 
 bool dr::Door::isClosed() {
     return !closing && closed;
+}
+
+bool dr::Door::isStopperEnabled() {
+    return digitalRead(STOP_T) == LOW;
 }
 
 dr::Door::~Door() {

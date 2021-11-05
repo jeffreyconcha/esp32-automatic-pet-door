@@ -3,8 +3,8 @@
 
 #ifndef DOOR_H
 #define DOOR_H
-#define MAX_TIME 5000
-#define TIME_DELAY 100
+#define MAX_TIME 3000
+#define TIME_DELAY 10
 
 #define STOP_T 0
 
@@ -28,6 +28,7 @@ namespace dr {
         dr::DoorState state;
         ult::UltraSonic* proximity;
         bool isTimeExpired();
+        bool isStopperEnabled();
 
     public:
         Door(dr::DoorState, ult::UltraSonic*);

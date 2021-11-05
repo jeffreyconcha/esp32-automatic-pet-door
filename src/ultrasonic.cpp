@@ -22,5 +22,8 @@ float ult::UltraSonic::readDistance() {
 
 bool ult::UltraSonic::isClear() {
     float distance = readDistance();
-    return distance <= MIN_DISTANCE || distance >= MAX_DISTANCE;
+    if (distance > 0) {
+        return distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
+    }
+    return true;
 }
