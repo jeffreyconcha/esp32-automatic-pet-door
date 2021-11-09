@@ -13,6 +13,7 @@
 using namespace std;
 
 #define SCAN_DURATION 10
+#define NEW_ENTRY_OPEN_DURATION 60000
 
 const string KNOWN_DEVICE_ADDRESSES[] = {
     "ff:ff:aa:05:68:d6",
@@ -29,8 +30,11 @@ BLEScan* scan;
 
 bool isKnownDevicesInRange(int, string);
 bool allDevicesOutOfRange();
+bool hasNewEntry();
 void openDoor();
 void closeDoor();
+void removeInactiveDevices();
+dvc::Device* getNewEntry();
 
 bool isDeviceRegistered(string identifier) {
     for (int i = 0; i < sizeof(KNOWN_DEVICE_ADDRESSES); i++) {
@@ -63,9 +67,15 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         if (isDeviceRegistered(mac)) {
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac);
+                Serial.print("NEW DEVICE FOUND: ");
+                Serial.println(mac.c_str());
             }
             dvc::Device* device = devices[mac];
             device->setRssi(rssi);
+            if (device->isNewEntry()) {
+                isDeviceFound = true;
+                scan->stop();
+            }
             if (device->inRange()) {
                 isDeviceFound = true;
                 scan->stop();
@@ -81,6 +91,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
             Serial.print(" @ ");
             Serial.println(rssi);
         }
+        removeInactiveDevices();
     }
 };
 
@@ -91,8 +102,33 @@ bool allDevicesOutOfRange() {
             return false;
         }
     }
-    devices.clear();
     return true;
+}
+
+void removeInactiveDevices() {
+    for (auto const& p : devices) {
+        string address = p.first;
+        dvc::Device* device = p.second;
+        if (!device->isActive()) {
+            devices.erase(address);
+            Serial.print("INACTIVE DEVICE: ");
+            Serial.println(address.c_str());
+        }
+    }
+}
+
+bool hasNewEntry() {
+    return getNewEntry() != 0;
+}
+
+dvc::Device* getNewEntry() {
+    for (auto const& p : devices) {
+        dvc::Device* device = p.second;
+        if (device->isNewEntry()) {
+            return device;
+        }
+    }
+    return 0;
 }
 
 void setup() {
@@ -122,7 +158,14 @@ void loop() {
         }
     }
     if (door->isOpened()) {
-        Serial.println("** DOOR IS OPEN **");
+        dvc::Device* device = getNewEntry();
+        if (device != 0) {
+            Serial.print("** DOOR IS OPEN FOR ");
+            Serial.print(device->getExpiration());
+            Serial.println(" SEC **");
+        } else {
+            Serial.println("** DOOR IS OPEN **");
+        }
     } else {
         Serial.println("** DOOR IS CLOSE **");
     }
