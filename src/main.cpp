@@ -74,7 +74,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
             dvc::Device* device = devices[mac];
             device->setRssi(rssi);
             if (hasDeviceToOpenFromOutside()) {
-                Serial.println("NEW DEVICE FOUND OUTSIDE...");
+                Serial.println("HAS DEVICE OUTSIDE...");
                 isDeviceFound = true;
                 scan->stop();
             } else {
