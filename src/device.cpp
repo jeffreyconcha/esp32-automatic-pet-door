@@ -2,14 +2,20 @@
 
 #include "esp_timer.h"
 
-dvc::Device::Device(std::string _mac) {
+dvc::Device::Device(std::string _mac, int _initialRssi) {
     mac = _mac;
     timeCreated = esp_timer_get_time() / 1000;
+    if (_initialRssi <= RSSI_OUTSIDE) {
+        outside = true;
+    }
 }
 
 void dvc::Device::setRssi(int _rssi) {
     rssi = _rssi;
     updateTime();
+    if (rssi >= RSSI_DOOR) {
+        outside = false;
+    }
     if (inRange()) {
         withinRange = true;
         counter = 0;
@@ -43,19 +49,19 @@ bool dvc::Device::isActive() {
     return duration <= MAX_INACTIVE_TIME;
 }
 
-bool dvc::Device::isNewEntry() {
-    return getCreateDuration() <= NEW_ENTRY_EXPIRATION;
+bool dvc::Device::shouldOpenFromOutside() {
+    return outside && getAge() <= FROM_OUTSIDE_OPEN_DURATION;
 }
 
-int64_t dvc::Device::getCreateDuration() {
+int64_t dvc::Device::getAge() {
     int64_t time = esp_timer_get_time() / 1000;
     return time - timeCreated;
 }
 
 int dvc::Device::getExpiration() {
-    int64_t duration = getCreateDuration();
-    if (duration <= NEW_ENTRY_EXPIRATION) {
-        return (NEW_ENTRY_EXPIRATION - duration) / 1000;
+    int64_t age = getAge();
+    if (age <= FROM_OUTSIDE_OPEN_DURATION) {
+        return (FROM_OUTSIDE_OPEN_DURATION - age) / 1000;
     }
     return 0;
 }

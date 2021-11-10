@@ -38,7 +38,6 @@ void mtr::Motor::reverse(int speed) {
 void mtr::Motor::stop() {
     digitalWrite(terminal1, LOW);
     digitalWrite(terminal2, LOW);
-    ledcWrite(CHANNEL, 0);
 }
 
 mtr::MotorSelection mtr::Motor::getSelection() {

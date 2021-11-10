@@ -30,11 +30,11 @@ BLEScan* scan;
 
 bool isKnownDevicesInRange(int, string);
 bool allDevicesOutOfRange();
-bool hasNewEntry();
+bool hasDeviceToOpenFromOutside();
 void openDoor();
 void closeDoor();
 void removeInactiveDevices();
-dvc::Device* getNewEntry();
+dvc::Device* getDeviceToOpenFromOutside();
 
 bool isDeviceRegistered(string identifier) {
     for (int i = 0; i < sizeof(KNOWN_DEVICE_ADDRESSES); i++) {
@@ -66,13 +66,15 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         int rssi = ads.getRSSI();
         if (isDeviceRegistered(mac)) {
             if (devices.find(mac) == devices.end()) {
-                devices[mac] = new dvc::Device(mac);
+                devices[mac] = new dvc::Device(mac, rssi);
                 Serial.print("NEW DEVICE FOUND: ");
-                Serial.println(mac.c_str());
+                Serial.print(mac.c_str());
+                Serial.print(" @ ");
+                Serial.println(rssi);
             }
             dvc::Device* device = devices[mac];
             device->setRssi(rssi);
-            if (device->isNewEntry()) {
+            if (hasDeviceToOpenFromOutside()) {
                 isDeviceFound = true;
                 scan->stop();
             }
@@ -117,14 +119,14 @@ void removeInactiveDevices() {
     }
 }
 
-bool hasNewEntry() {
-    return getNewEntry() != 0;
+bool hasDeviceToOpenFromOutside() {
+    return getDeviceToOpenFromOutside() != 0;
 }
 
-dvc::Device* getNewEntry() {
+dvc::Device* getDeviceToOpenFromOutside() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
-        if (device->isNewEntry()) {
+        if (device->shouldOpenFromOutside()) {
             return device;
         }
     }
@@ -158,7 +160,7 @@ void loop() {
         }
     }
     if (door->isOpened()) {
-        dvc::Device* device = getNewEntry();
+        dvc::Device* device = getDeviceToOpenFromOutside();
         if (device != 0) {
             Serial.print("** DOOR IS OPEN FOR ");
             Serial.print(device->getExpiration());

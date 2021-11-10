@@ -28,16 +28,16 @@ void dr::Door::init() {
 void dr::Door::open() {
     if (!opened && !opening) {
         opening = true;
+        motorA->forward(180);
+        motorB->forward(180);
         if (isStopperEnabled()) {
-            motorA->forward(75);
-            motorB->forward(75);
             delay(500);
         }
-        motorA->forward(125);
-        motorB->forward(125);
         timeCounter = 0;
         while (!isStopperEnabled() && !isTimeExpired()) {
-            Serial.println("**OPENING**");
+            if (timeCounter == 0) {
+                Serial.println("********* OPENING *********");
+            }
             delay(TIME_DELAY);
             timeCounter++;
         }
@@ -50,17 +50,17 @@ void dr::Door::open() {
 void dr::Door::close() {
     if (!closed && !closing) {
         closing = true;
-        if (isStopperEnabled()) {
-            motorA->reverse(75);
-            motorB->reverse(75);
-            delay(500);
-        }
         motorA->reverse(75);
         motorB->reverse(75);
+        if (isStopperEnabled()) {
+            delay(500);
+        }
         bool isClear = proximity->isClear();
         timeCounter = 0;
         while (!isStopperEnabled() && !isTimeExpired() && isClear) {
-            Serial.println("**CLOSING**");
+            if (timeCounter == 0) {
+                Serial.println("********* CLOSING *********");
+            }
             isClear = proximity->isClear();
             delay(TIME_DELAY);
             timeCounter++;

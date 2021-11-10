@@ -15,15 +15,18 @@ float ult::UltraSonic::readDistance() {
     digitalWrite(TRIGGER_PIN, LOW);
     long duration = pulseIn(ECHO_PIN, HIGH);
     float distance = duration * (SPEED_OF_SOUND / 2);
-    Serial.print("DISTANCE (cm): ");
-    Serial.println(distance);
     return distance;
 }
 
 bool ult::UltraSonic::isClear() {
     float distance = readDistance();
     if (distance > 0) {
-        return distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
+        bool isClear = distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
+        if (!isClear) {
+            Serial.print("DISTANCE (cm): ");
+            Serial.println(distance);
+        }
+        return isClear;
     }
     return true;
 }
