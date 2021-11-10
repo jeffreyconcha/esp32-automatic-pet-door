@@ -9,6 +9,7 @@
 #include "device.h"
 #include "door.h"
 #include "ultrasonic.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -67,31 +68,30 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         if (isDeviceRegistered(mac)) {
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac, rssi);
-                Serial.print("NEW DEVICE FOUND: ");
-                Serial.print(mac.c_str());
-                Serial.print(" @ ");
-                Serial.println(rssi);
+                string log = "NEW DEVICE FOUND: " + mac + ", @" + utl::Utils::toString(rssi);
+                Serial.println(log.c_str());
             }
             dvc::Device* device = devices[mac];
             device->setRssi(rssi);
             if (hasDeviceToOpenFromOutside()) {
+                Serial.println("NEW DEVICE FOUND OUTSIDE...");
                 isDeviceFound = true;
                 scan->stop();
-            }
-            if (device->inRange()) {
-                isDeviceFound = true;
-                scan->stop();
-                Serial.println("DEVICE FOUND STOPPING SCAN...");
             } else {
-                if (allDevicesOutOfRange()) {
-                    isDeviceFound = false;
+                if (device->inRange()) {
+                    isDeviceFound = true;
                     scan->stop();
-                    Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
+                    Serial.println("DEVICE FOUND STOPPING SCAN...");
+                } else {
+                    if (allDevicesOutOfRange()) {
+                        isDeviceFound = false;
+                        scan->stop();
+                        Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
+                    }
                 }
             }
-            Serial.print(mac.c_str());
-            Serial.print(" @ ");
-            Serial.println(rssi);
+            string log = mac + " @ " + utl::Utils::toString(rssi);
+            Serial.println(log.c_str());
         }
         removeInactiveDevices();
     }
@@ -113,8 +113,8 @@ void removeInactiveDevices() {
         dvc::Device* device = p.second;
         if (!device->isActive()) {
             devices.erase(address);
-            Serial.print("INACTIVE DEVICE: ");
-            Serial.println(address.c_str());
+            string log = "INACTIVE DEVICE: " + address;
+            Serial.println(log.c_str());
         }
     }
 }
@@ -162,9 +162,9 @@ void loop() {
     if (door->isOpened()) {
         dvc::Device* device = getDeviceToOpenFromOutside();
         if (device != 0) {
-            Serial.print("** DOOR IS OPEN FOR ");
-            Serial.print(device->getExpiration());
-            Serial.println(" SEC **");
+            string log = "** DOOR IS OPEN FOR " + utl::Utils::toString(device->getExpiration()) + " SEC **";
+            Serial.println(log.c_str());
+
         } else {
             Serial.println("** DOOR IS OPEN **");
         }

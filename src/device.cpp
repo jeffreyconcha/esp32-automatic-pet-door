@@ -13,10 +13,8 @@ dvc::Device::Device(std::string _mac, int _initialRssi) {
 void dvc::Device::setRssi(int _rssi) {
     rssi = _rssi;
     updateTime();
-    if (rssi >= RSSI_DOOR) {
-        outside = false;
-    }
     if (inRange()) {
+        outside = false;
         withinRange = true;
         counter = 0;
     } else {

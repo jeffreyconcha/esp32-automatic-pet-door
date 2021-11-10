@@ -1,6 +1,7 @@
 #include "ultrasonic.h"
 
 #include "Arduino.h"
+#include "utils.h"
 
 void ult::UltraSonic::init() {
     pinMode(TRIGGER_PIN, OUTPUT);
@@ -23,8 +24,8 @@ bool ult::UltraSonic::isClear() {
     if (distance > 0) {
         bool isClear = distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
         if (!isClear) {
-            Serial.print("DISTANCE (cm): ");
-            Serial.println(distance);
+            std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
+            Serial.println(log.c_str());
         }
         return isClear;
     }
