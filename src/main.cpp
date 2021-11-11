@@ -25,6 +25,7 @@ std::map<string, dvc::Device*> devices;
 int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
+bool hasResult = false;
 ult::UltraSonic* proximity;
 dr::Door* door;
 BLEScan* scan;
@@ -64,17 +65,16 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         string mac = address.toString();
         int rssi = ads.getRSSI();
         if (isDeviceRegistered(mac)) {
-            string info = mac + " @ " + utl::Utils::toString(rssi);
+            hasResult = true;
+            string info = "REGISTERED DEVICE DETECTED: " + mac + ", @" + utl::Utils::toString(rssi);
             Serial.println(info.c_str());
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac, rssi);
-                string log = "NEW DEVICE FOUND: " + info;
-                Serial.println(log.c_str());
             }
             dvc::Device* device = devices[mac];
             device->setRssi(rssi);
             if (hasDeviceToOpenFromOutside()) {
-                Serial.println("HAS DEVICE OUTSIDE...");
+                Serial.println("HAS DEVICE OUTSIDE STOPPING SCAN...");
                 isDeviceFound = true;
                 scan->stop();
             } else {
@@ -86,7 +86,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
                     if (hasDeviceWithChance()) {
                         isDeviceFound = true;
                         scan->stop();
-                        Serial.println("COUNTING NOT IN RANGE STATUS, STOPPING SCAN...");
+                        Serial.println("HAS DEVICE WITH CHANCE STOPPING SCAN...");
                     } else {
                         Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
                     }
@@ -101,9 +101,6 @@ bool hasDeviceWithChance() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
         if (device->hasChance()) {
-            int remaining = device->getChancesLeft();
-            string log = "CHANCE REMAINING(" + p.first + "): " + utl::Utils::toString(remaining);
-            Serial.println(log.c_str());
             return true;
         }
     }
@@ -154,6 +151,8 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
+    string hs = "HAS RESULT: " + utl::Utils::toString(hasResult);
+    Serial.println(hs.c_str());
     string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
     Serial.println(result.c_str());
     if (isDeviceFound) {
@@ -178,4 +177,5 @@ void loop() {
         Serial.println("** DOOR IS CLOSE **");
     }
     scan->clearResults();
+    hasResult = false;
 }

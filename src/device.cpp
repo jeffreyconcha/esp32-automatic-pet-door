@@ -1,12 +1,19 @@
 #include "device.h"
 
+#include <Arduino.h>
+
+#include <iostream>
+
 #include "esp_timer.h"
+#include "utils.h"
 
 dvc::Device::Device(std::string _mac, int _initialRssi) {
     mac = _mac;
     timeCreated = esp_timer_get_time() / 1000;
     if (_initialRssi <= RSSI_OUTSIDE) {
         outside = true;
+        std::string log = "DEVICE FOUND OUTSIDE: " + mac + ", @" + utl::Utils::toString(_initialRssi);
+        Serial.println(log.c_str());
     }
 }
 
@@ -18,9 +25,15 @@ void dvc::Device::setRssi(int _rssi) {
         withinRange = true;
         counter = 0;
     } else {
-        counter++;
-        if (counter > MAX_OOR_COUNT) {
-            withinRange = false;
+        //Device has to be in range first before using the 5 chances.
+        if (withinRange) {
+            counter++;
+            if (counter > MAX_OOR_COUNT) {
+                withinRange = false;
+                counter = 0;
+            }
+            std::string log = "NOT IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(counter);
+            Serial.println(log.c_str());
         }
     }
 }
@@ -66,8 +79,4 @@ int dvc::Device::getExpiration() {
 
 std::string dvc::Device::getMac() {
     return mac;
-}
-
-int dvc::Device::getChancesLeft() {
-    return MAX_OOR_COUNT - counter;
 }
