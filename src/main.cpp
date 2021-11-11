@@ -30,7 +30,7 @@ dr::Door* door;
 BLEScan* scan;
 
 bool isKnownDevicesInRange(int, string);
-bool allDevicesOutOfRange();
+bool hasDeviceWithChance();
 bool hasDeviceToOpenFromOutside();
 void openDoor();
 void closeDoor();
@@ -48,14 +48,12 @@ bool isDeviceRegistered(string identifier) {
 
 void openDoor() {
     if (door->isClosed()) {
-        Serial.println("OPENING DOOR...");
         door->open();
     }
 }
 
 void closeDoor() {
     if (door->isOpened()) {
-        Serial.println("CLOSING DOOR...");
         door->close();
     }
 }
@@ -66,9 +64,11 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         string mac = address.toString();
         int rssi = ads.getRSSI();
         if (isDeviceRegistered(mac)) {
+            string info = mac + " @ " + utl::Utils::toString(rssi);
+            Serial.println(info.c_str());
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac, rssi);
-                string log = "NEW DEVICE FOUND: " + mac + ", @" + utl::Utils::toString(rssi);
+                string log = "NEW DEVICE FOUND: " + info;
                 Serial.println(log.c_str());
             }
             dvc::Device* device = devices[mac];
@@ -83,38 +83,41 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
                     scan->stop();
                     Serial.println("DEVICE FOUND STOPPING SCAN...");
                 } else {
-                    if (allDevicesOutOfRange()) {
-                        isDeviceFound = false;
+                    if (hasDeviceWithChance()) {
+                        isDeviceFound = true;
                         scan->stop();
+                        Serial.println("COUNTING NOT IN RANGE STATUS, STOPPING SCAN...");
+                    } else {
                         Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
                     }
                 }
             }
-            string log = mac + " @ " + utl::Utils::toString(rssi);
-            Serial.println(log.c_str());
         }
         removeInactiveDevices();
     }
 };
 
-bool allDevicesOutOfRange() {
+bool hasDeviceWithChance() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
         if (device->hasChance()) {
-            return false;
+            int remaining = device->getChancesLeft();
+            string log = "CHANCE REMAINING(" + p.first + "): " + utl::Utils::toString(remaining);
+            Serial.println(log.c_str());
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 void removeInactiveDevices() {
     for (auto const& p : devices) {
         string address = p.first;
         dvc::Device* device = p.second;
-        if (!device->isActive()) {
-            devices.erase(address);
+        if (!device->isActive() && !device->shouldOpenFromOutside()) {
             string log = "INACTIVE DEVICE: " + address;
             Serial.println(log.c_str());
+            devices.erase(address);
         }
     }
 }
@@ -151,11 +154,14 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
+    string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
+    Serial.println(result.c_str());
     if (isDeviceFound) {
         openDoor();
+        //RESET THE STATUS
         isDeviceFound = false;
     } else {
-        if (proximity->isClear()) {
+        if (!hasDeviceToOpenFromOutside() && proximity->isClear()) {
             closeDoor();
         }
     }

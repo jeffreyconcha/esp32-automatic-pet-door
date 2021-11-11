@@ -67,3 +67,7 @@ int dvc::Device::getExpiration() {
 std::string dvc::Device::getMac() {
     return mac;
 }
+
+int dvc::Device::getChancesLeft() {
+    return MAX_OOR_COUNT - counter;
+}

@@ -5,7 +5,7 @@
 
 #define MAX_OOR_COUNT 5
 #define RSSI_THRESHOLD -75
-#define RSSI_OUTSIDE -90
+#define RSSI_OUTSIDE -85
 #define MAX_INACTIVE_TIME 60000
 #define FROM_OUTSIDE_OPEN_DURATION 180000
 
@@ -33,6 +33,7 @@ namespace dvc {
         std::string getMac();
         int getRssi();
         int getExpiration();
+        int getChancesLeft();
     };
 }
 
