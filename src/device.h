@@ -3,6 +3,7 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#define IN_RANGE_CHECK 3
 #define MAX_OOR_COUNT 5
 #define RSSI_THRESHOLD -75
 #define RSSI_OUTSIDE -85
@@ -14,18 +15,20 @@ namespace dvc {
     private:
         std::string mac;
         int rssi;
-        int counter;
+        int inRangeCount = 0;
+        int outOfRangeCount = 0;
         int initialRssi;
         int64_t timeCreated;
         int64_t timeUpdated;
-        bool withinRange;
+        bool hasBeenInRange;
         bool outside;
+        bool forInRangeRechecking;
         void updateTime();
         int64_t getAge();
 
     public:
         Device(std::string, int);
-        void setRssi(int);
+        void setRssi(int, bool);
         bool inRange();
         bool hasChance();
         bool isActive();

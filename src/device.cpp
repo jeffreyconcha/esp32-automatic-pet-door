@@ -17,24 +17,46 @@ dvc::Device::Device(std::string _mac, int _initialRssi) {
     }
 }
 
-void dvc::Device::setRssi(int _rssi) {
+void dvc::Device::setRssi(int _rssi, bool isClosed) {
+    int lastRssi = rssi;
     rssi = _rssi;
     updateTime();
-    if (inRange()) {
+    if (rssi >= RSSI_THRESHOLD) {
         outside = false;
-        withinRange = true;
-        counter = 0;
-    } else {
-        //Device has to be in range first before using the 5 chances.
-        if (withinRange) {
-            counter++;
-            if (counter > MAX_OOR_COUNT) {
-                withinRange = false;
-                counter = 0;
-            }
-            std::string log = "NOT IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(counter);
+        if (forInRangeRechecking) {
+            inRangeCount++;
+            std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
             Serial.println(log.c_str());
+            if (inRangeCount >= IN_RANGE_CHECK) {
+                forInRangeRechecking = false;
+                inRangeCount = 0;
+                hasBeenInRange = true;
+                outOfRangeCount = 0;
+                Serial.println("IN RANGE CONFIRMED...");
+            }
+        } else {
+            //Check if the last rssi is out of range before opening the door.
+            if (isClosed && lastRssi < RSSI_THRESHOLD) {
+                Serial.println("FOR RECHECKING IN RANGE SIGNAL...");
+                forInRangeRechecking = true;
+            } else {
+                hasBeenInRange = true;
+                outOfRangeCount = 0;
+            }
         }
+    } else {
+        //Device has to be in range first before it can use its 5 chances.
+        if (hasBeenInRange) {
+            outOfRangeCount++;
+            std::string log = "OUT OF RANGE COUNT(" + mac + "): " + utl::Utils::toString(outOfRangeCount);
+            Serial.println(log.c_str());
+            if (outOfRangeCount >= MAX_OOR_COUNT) {
+                hasBeenInRange = false;
+                outOfRangeCount = 0;
+            }
+        }
+        forInRangeRechecking = false;
+        inRangeCount = 0;
     }
 }
 
@@ -47,11 +69,16 @@ int dvc::Device::getRssi() {
 }
 
 bool dvc::Device::inRange() {
-    return rssi >= RSSI_THRESHOLD;
+    return rssi >= RSSI_THRESHOLD && !forInRangeRechecking;
 }
 
 bool dvc::Device::hasChance() {
-    return withinRange && counter <= MAX_OOR_COUNT;
+    if (forInRangeRechecking) {
+        Serial.println("UNABLE TO USE CHANCES DUE TO IN RANGE RECHECKING...");
+        return false;
+    } else {
+        return hasBeenInRange && outOfRangeCount <= MAX_OOR_COUNT;
+    }
 }
 
 bool dvc::Device::isActive() {

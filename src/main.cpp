@@ -67,12 +67,14 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         if (isDeviceRegistered(mac)) {
             hasResult = true;
             string info = "REGISTERED DEVICE DETECTED: " + mac + ", @" + utl::Utils::toString(rssi);
+            Serial.println("---------------------------------------------------");
             Serial.println(info.c_str());
+            Serial.println("---------------------------------------------------");
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac, rssi);
             }
             dvc::Device* device = devices[mac];
-            device->setRssi(rssi);
+            device->setRssi(rssi, door->isClosed());
             if (hasDeviceToOpenFromOutside()) {
                 Serial.println("HAS DEVICE OUTSIDE STOPPING SCAN...");
                 isDeviceFound = true;
