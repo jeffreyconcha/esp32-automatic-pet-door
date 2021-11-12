@@ -17,8 +17,7 @@ dvc::Device::Device(std::string _mac, int _initialRssi) {
     }
 }
 
-void dvc::Device::setRssi(int _rssi, bool isClosed) {
-    int lastRssi = rssi;
+void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
     rssi = _rssi;
     updateTime();
     if (rssi >= RSSI_THRESHOLD) {
@@ -35,10 +34,12 @@ void dvc::Device::setRssi(int _rssi, bool isClosed) {
                 Serial.println("IN RANGE CONFIRMED...");
             }
         } else {
-            //Check if the last rssi is out of range before opening the door.
-            if (isClosed && lastRssi < RSSI_THRESHOLD) {
+            //Check for rssi history before opening the door.
+            if (isDoorClosed && hasBadHistory()) {
                 Serial.println("FOR RECHECKING IN RANGE SIGNAL...");
                 forInRangeRechecking = true;
+                inRangeCount = 1;
+                std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
             } else {
                 hasBeenInRange = true;
                 outOfRangeCount = 0;
@@ -58,6 +59,31 @@ void dvc::Device::setRssi(int _rssi, bool isClosed) {
         forInRangeRechecking = false;
         inRangeCount = 0;
     }
+    updateHistory(rssi);
+}
+
+void dvc::Device::updateHistory(int rssi) {
+    history.push_front(rssi);
+    if (history.size() > MAX_RSSI_RECORD_HISTORY) {
+        history.pop_back();
+    }
+}
+
+bool dvc::Device::hasBadHistory() {
+    if (history.size() >= MAX_RSSI_RECORD_HISTORY) {
+        //Bad history requires all rssi record to be out of range
+        for (int rssi : history) {
+            std::string log = "RSSI HISTORY: " + utl::Utils::toString(rssi);
+            Serial.println(log.c_str());
+            if (rssi >= RSSI_THRESHOLD) {
+                Serial.println("WITH GOOD HISTORY");
+                return false;
+            }
+        }
+        Serial.println("WITH BAD HISTORY");
+        return true;
+    }
+    return false;
 }
 
 void dvc::Device::updateTime() {
@@ -81,10 +107,17 @@ bool dvc::Device::hasChance() {
     }
 }
 
-bool dvc::Device::isActive() {
+int64_t dvc::Device::getLastUpdate() {
     int64_t time = esp_timer_get_time() / 1000;
-    int64_t duration = time - timeUpdated;
-    return duration <= MAX_INACTIVE_TIME;
+    return time - timeUpdated;
+}
+
+bool dvc::Device::isActive() {
+    return getLastUpdate() <= MAX_INACTIVE_TIME;
+}
+
+bool dvc::Device::hasUpdate() {
+    return getLastUpdate() <= MAX_NO_UPDATE_DURATION;
 }
 
 bool dvc::Device::shouldOpenFromOutside() {

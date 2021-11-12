@@ -1,4 +1,5 @@
 #include <iostream>
+#include <list>
 
 #ifndef DEVICE_H
 #define DEVICE_H
@@ -7,6 +8,8 @@
 #define MAX_OOR_COUNT 5
 #define RSSI_THRESHOLD -75
 #define RSSI_OUTSIDE -85
+#define MAX_RSSI_RECORD_HISTORY 3
+#define MAX_NO_UPDATE_DURATION 30000
 #define MAX_INACTIVE_TIME 180000
 #define FROM_OUTSIDE_OPEN_DURATION 180000
 
@@ -20,11 +23,15 @@ namespace dvc {
         int initialRssi;
         int64_t timeCreated;
         int64_t timeUpdated;
+        std::list<int> history;
         bool hasBeenInRange;
         bool outside;
         bool forInRangeRechecking;
+        bool hasBadHistory();
         void updateTime();
+        void updateHistory(int);
         int64_t getAge();
+        int64_t getLastUpdate();
 
     public:
         Device(std::string, int);
@@ -32,6 +39,7 @@ namespace dvc {
         bool inRange();
         bool hasChance();
         bool isActive();
+        bool hasUpdate();
         bool shouldOpenFromOutside();
         std::string getMac();
         int getRssi();

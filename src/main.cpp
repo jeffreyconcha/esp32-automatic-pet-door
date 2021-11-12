@@ -15,11 +15,13 @@ using namespace std;
 
 #define SCAN_DURATION 10
 #define NEW_ENTRY_OPEN_DURATION 60000
+#define NO_RESULT_DURATION 30
 
-const string KNOWN_DEVICE_ADDRESSES[] = {
-    "ff:ff:aa:05:68:d6",
-    "ff:ff:bb:b8:a3:3c",
-    "ff:ff:bb:07:7b:07"};
+std::map<string, string> tags = {
+    {"ff:ff:aa:05:68:d6", "DAMULAG"},
+    {"ff:ff:bb:b8:a3:3c", "CALI"},
+    {"ff:ff:bb:07:7b:07", "MUNING"},
+};
 
 std::map<string, dvc::Device*> devices;
 int scanDuration = SCAN_DURATION;
@@ -33,14 +35,15 @@ BLEScan* scan;
 bool isKnownDevicesInRange(int, string);
 bool hasDeviceWithChance();
 bool hasDeviceToOpenFromOutside();
+bool hasDeviceWithUpdate();
 void openDoor();
 void closeDoor();
 void removeInactiveDevices();
 dvc::Device* getDeviceToOpenFromOutside();
 
 bool isDeviceRegistered(string identifier) {
-    for (int i = 0; i < sizeof(KNOWN_DEVICE_ADDRESSES); i++) {
-        if (KNOWN_DEVICE_ADDRESSES[i] == identifier) {
+    for (auto const& tag : tags) {
+        if (tag.first == identifier) {
             return true;
         }
     }
@@ -66,10 +69,11 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
         int rssi = ads.getRSSI();
         if (isDeviceRegistered(mac)) {
             hasResult = true;
-            string info = "REGISTERED DEVICE DETECTED: " + mac + ", @" + utl::Utils::toString(rssi);
-            Serial.println("---------------------------------------------------");
+            string name = tags[mac];
+            string info = "REGISTERED DEVICE DETECTED: " + mac + " (" + name + "), @" + utl::Utils::toString(rssi);
+            Serial.println("-------------------------------------------------------------");
             Serial.println(info.c_str());
-            Serial.println("---------------------------------------------------");
+            Serial.println("-------------------------------------------------------------");
             if (devices.find(mac) == devices.end()) {
                 devices[mac] = new dvc::Device(mac, rssi);
             }
@@ -121,6 +125,16 @@ void removeInactiveDevices() {
     }
 }
 
+bool hasDeviceWithUpdate() {
+    for (auto const& p : devices) {
+        dvc::Device* device = p.second;
+        if (device->hasUpdate()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool hasDeviceToOpenFromOutside() {
     return getDeviceToOpenFromOutside() != 0;
 }
@@ -153,8 +167,6 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
-    string hs = "HAS RESULT: " + utl::Utils::toString(hasResult);
-    Serial.println(hs.c_str());
     string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
     Serial.println(result.c_str());
     if (isDeviceFound) {
@@ -162,7 +174,8 @@ void loop() {
         //RESET THE STATUS
         isDeviceFound = false;
     } else {
-        if (!hasDeviceToOpenFromOutside() && proximity->isClear()) {
+        bool _hasResult = hasResult || !hasDeviceWithUpdate();
+        if (!hasDeviceToOpenFromOutside() && proximity->isClear() && _hasResult) {
             closeDoor();
         }
     }
