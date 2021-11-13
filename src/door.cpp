@@ -4,8 +4,8 @@
 
 #include "motor.h"
 
-dr::Door::Door(dr::DoorState _state, ult::UltraSonic* _proximity) {
-    state = _state;
+dr::Door::Door(dr::DoorState _initialState, ult::UltraSonic* _proximity) {
+    initialState = _initialState;
     proximity = _proximity;
 }
 
@@ -15,19 +15,21 @@ void dr::Door::init() {
     motorA->init();
     motorB->init();
     pinMode(STOP_T, INPUT_PULLUP);
-    switch (state) {
-    case OPENED:
+    switch (initialState) {
+    case dr::DoorState::OPENED:
         open();
         break;
-    case CLOSED:
+    case dr::DoorState::CLOSED:
         close();
+        break;
+    default:
         break;
     }
 }
 
 void dr::Door::open() {
-    if (!opened && !opening) {
-        opening = true;
+    if (state != dr::DoorState::OPENED && state != dr::DoorState::OPENING) {
+        setState(dr::DoorState::OPENING);
         motorA->forward(200);
         motorB->forward(200);
         if (isStopperEnabled()) {
@@ -35,51 +37,58 @@ void dr::Door::open() {
         }
         timeCounter = 0;
         while (!isStopperEnabled() && !isTimeExpired()) {
-            if (timeCounter == 0) {
-                Serial.println("***************************** OPENING *****************************");
-            }
             delay(TIME_DELAY);
             timeCounter++;
         }
         stop();
-        opened = true;
-        closed = false;
+        setState(dr::DoorState::OPENED);
     }
 }
 
 void dr::Door::close() {
-    if (!closed && !closing) {
-        closing = true;
+    if (state != dr::DoorState::CLOSED && state != dr::DoorState::CLOSING) {
+        setState(dr::DoorState::CLOSING);
         motorA->reverse(75);
         motorB->reverse(75);
         if (isStopperEnabled()) {
             delay(500);
         }
-        bool isClear = proximity->isClear();
+        bool isClear;
         timeCounter = 0;
-        while (!isStopperEnabled() && !isTimeExpired() && isClear) {
-            if (timeCounter == 0) {
-                Serial.println("***************************** CLOSING *****************************");
-            }
-            isClear = proximity->isClear();
+        while ((isClear = proximity->isClear()) && !isStopperEnabled() && !isTimeExpired()) {
             delay(TIME_DELAY);
             timeCounter++;
         }
-        stop();
-        opened = false;
-        if (!isClear) {
+        if (isClear) {
+            stop();
+            setState(dr::DoorState::CLOSED);
+        } else {
             open();
-            return;
         }
-        closed = true;
     }
 }
 
 void dr::Door::stop() {
     motorA->stop();
     motorB->stop();
-    opening = false;
-    closing = false;
+}
+
+void dr::Door::setState(dr::DoorState _state) {
+    state = _state;
+    switch (state) {
+    case dr::DoorState::OPENED:
+        Serial.println("***************************** OPENED  *****************************");
+        break;
+    case dr::DoorState::CLOSED:
+        Serial.println("***************************** CLOSED  *****************************");
+        break;
+    case dr::DoorState::OPENING:
+        Serial.println("***************************** OPENING *****************************");
+        break;
+    case dr::DoorState::CLOSING:
+        Serial.println("***************************** CLOSING *****************************");
+        break;
+    }
 }
 
 bool dr::Door::isTimeExpired() {
@@ -87,19 +96,19 @@ bool dr::Door::isTimeExpired() {
 }
 
 bool dr::Door::isOpening() {
-    return opening;
+    return state == dr::DoorState::OPENING;
 }
 
 bool dr::Door::isClosing() {
-    return closing;
+    return state == dr::DoorState::CLOSING;
 }
 
 bool dr::Door::isOpened() {
-    return !opening && opened;
+    return state == dr::DoorState::OPENED;
 }
 
 bool dr::Door::isClosed() {
-    return !closing && closed;
+    return state == dr::DoorState::CLOSED;
 }
 
 bool dr::Door::isStopperEnabled() {

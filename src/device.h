@@ -6,8 +6,9 @@
 
 #define IN_RANGE_CHECK 3
 #define MAX_OOR_COUNT 5
-#define RSSI_THRESHOLD -75
-#define RSSI_OUTSIDE -85
+#define RSSI_HIGH_THRESHOLD 65
+#define RSSI_NORMAL_THRESHOLD -75
+#define RSSI_LOW_THRESHOLD -85
 #define MAX_RSSI_RECORD_HISTORY 3
 #define MAX_NO_UPDATE_DURATION 30000
 #define MAX_INACTIVE_TIME 180000
@@ -18,15 +19,15 @@ namespace dvc {
     private:
         std::string mac;
         int rssi;
+        int initialRssi;
         int inRangeCount = 0;
         int outOfRangeCount = 0;
-        int initialRssi;
         int64_t timeCreated;
         int64_t timeUpdated;
         std::list<int> history;
-        bool hasBeenInRange;
-        bool outside;
-        bool forInRangeRechecking;
+        bool outside = false;
+        bool hasBeenInRange = false;
+        bool forInRangeRechecking = false;
         bool hasBadHistory();
         void updateTime();
         void updateHistory(int);

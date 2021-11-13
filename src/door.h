@@ -12,7 +12,9 @@ namespace dr {
 
     enum DoorState {
         OPENED,
-        CLOSED
+        CLOSED,
+        OPENING,
+        CLOSING,
     };
 
     class Door {
@@ -21,11 +23,8 @@ namespace dr {
         mtr::Motor* motorB;
         int duration = 0;
         int timeCounter = 0;
-        bool closing = false;
-        bool opening = false;
-        bool closed = true;
-        bool opened = false;
         dr::DoorState state;
+        dr::DoorState initialState;
         ult::UltraSonic* proximity;
         bool isTimeExpired();
         bool isStopperEnabled();
@@ -36,6 +35,7 @@ namespace dr {
         void open();
         void close();
         void stop();
+        void setState(dr::DoorState);
         bool isOpening();
         bool isClosing();
         bool isOpened();

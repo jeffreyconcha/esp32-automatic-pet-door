@@ -14,7 +14,6 @@
 using namespace std;
 
 #define SCAN_DURATION 10
-#define NEW_ENTRY_OPEN_DURATION 60000
 #define NO_RESULT_DURATION 30
 
 std::map<string, string> tags = {
@@ -89,12 +88,12 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
                     scan->stop();
                     Serial.println("DEVICE FOUND STOPPING SCAN...");
                 } else {
-                    if (hasDeviceWithChance()) {
+                    if (door->isOpened() && hasDeviceWithChance()) {
                         isDeviceFound = true;
                         scan->stop();
                         Serial.println("HAS DEVICE WITH CHANCE STOPPING SCAN...");
                     } else {
-                        Serial.println("ALL DEVICES GOES OUT OF RANGE!!!");
+                        Serial.println("NO DEVICES IN RANGE...");
                     }
                 }
             }
@@ -118,7 +117,7 @@ void removeInactiveDevices() {
         string address = p.first;
         dvc::Device* device = p.second;
         if (!device->isActive() && !device->shouldOpenFromOutside()) {
-            string log = "INACTIVE DEVICE: " + address;
+            string log = "INACTIVE DEVICE: " + address + " (" + tags[address] + ")";
             Serial.println(log.c_str());
             devices.erase(address);
         }
@@ -155,7 +154,7 @@ void setup() {
     BLEDevice::init("ESP32-38");
     proximity = new ult::UltraSonic();
     proximity->init();
-    door = new dr::Door(dr::CLOSED, proximity);
+    door = new dr::Door(dr::DoorState::CLOSED, proximity);
     door->init();
     scan = BLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(new ScanCallback());

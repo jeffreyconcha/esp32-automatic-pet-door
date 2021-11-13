@@ -10,7 +10,7 @@
 dvc::Device::Device(std::string _mac, int _initialRssi) {
     mac = _mac;
     timeCreated = esp_timer_get_time() / 1000;
-    if (_initialRssi <= RSSI_OUTSIDE) {
+    if (_initialRssi <= RSSI_LOW_THRESHOLD) {
         outside = true;
         std::string log = "DEVICE FOUND OUTSIDE: " + mac + ", @" + utl::Utils::toString(_initialRssi);
         Serial.println(log.c_str());
@@ -20,8 +20,7 @@ dvc::Device::Device(std::string _mac, int _initialRssi) {
 void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
     rssi = _rssi;
     updateTime();
-    if (rssi >= RSSI_THRESHOLD) {
-        outside = false;
+    if (rssi >= RSSI_NORMAL_THRESHOLD) {
         if (forInRangeRechecking) {
             inRangeCount++;
             std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
@@ -35,12 +34,13 @@ void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
             }
         } else {
             //Check for rssi history before opening the door.
-            if (isDoorClosed && hasBadHistory()) {
+            if (isDoorClosed && hasBadHistory() && rssi < RSSI_HIGH_THRESHOLD) {
                 Serial.println("FOR RECHECKING IN RANGE SIGNAL...");
                 forInRangeRechecking = true;
                 inRangeCount = 1;
                 std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
             } else {
+                outside = false;
                 hasBeenInRange = true;
                 outOfRangeCount = 0;
             }
@@ -75,7 +75,7 @@ bool dvc::Device::hasBadHistory() {
         for (int rssi : history) {
             std::string log = "RSSI HISTORY: " + utl::Utils::toString(rssi);
             Serial.println(log.c_str());
-            if (rssi >= RSSI_THRESHOLD) {
+            if (rssi >= RSSI_NORMAL_THRESHOLD) {
                 Serial.println("WITH GOOD HISTORY");
                 return false;
             }
@@ -95,7 +95,7 @@ int dvc::Device::getRssi() {
 }
 
 bool dvc::Device::inRange() {
-    return rssi >= RSSI_THRESHOLD && !forInRangeRechecking;
+    return rssi >= RSSI_NORMAL_THRESHOLD && !forInRangeRechecking;
 }
 
 bool dvc::Device::hasChance() {
