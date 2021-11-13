@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "motor.h"
 #include "ultrasonic.h"
 
@@ -22,11 +24,13 @@ namespace dr {
         mtr::Motor* motorA;
         mtr::Motor* motorB;
         int duration = 0;
-        int timeCounter = 0;
         dr::DoorState state;
         dr::DoorState initialState;
         ult::UltraSonic* proximity;
-        bool isTimeExpired();
+        int64_t openingTime;
+        int64_t closingTime;
+        int64_t getDuration(int64_t);
+        bool isMaxDurationReached(int64_t);
         bool isStopperEnabled();
 
     public:

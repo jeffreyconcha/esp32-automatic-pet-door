@@ -4,12 +4,11 @@
 
 #include <iostream>
 
-#include "esp_timer.h"
 #include "utils.h"
 
 dvc::Device::Device(std::string _mac, int _initialRssi) {
     mac = _mac;
-    timeCreated = esp_timer_get_time() / 1000;
+    timeCreated = utl::Utils::getCurrentTime();
     if (_initialRssi <= RSSI_LOW_THRESHOLD) {
         outside = true;
         std::string log = "DEVICE FOUND OUTSIDE: " + mac + ", @" + utl::Utils::toString(_initialRssi);
@@ -87,7 +86,7 @@ bool dvc::Device::hasBadHistory() {
 }
 
 void dvc::Device::updateTime() {
-    timeUpdated = esp_timer_get_time() / 1000;
+    timeUpdated = utl::Utils::getCurrentTime();
 }
 
 int dvc::Device::getRssi() {
@@ -108,8 +107,7 @@ bool dvc::Device::hasChance() {
 }
 
 int64_t dvc::Device::getLastUpdate() {
-    int64_t time = esp_timer_get_time() / 1000;
-    return time - timeUpdated;
+    return utl::Utils::getCurrentTime() - timeUpdated;
 }
 
 bool dvc::Device::isActive() {
@@ -125,8 +123,7 @@ bool dvc::Device::shouldOpenFromOutside() {
 }
 
 int64_t dvc::Device::getAge() {
-    int64_t time = esp_timer_get_time() / 1000;
-    return time - timeCreated;
+    return utl::Utils::getCurrentTime() - timeCreated;
 }
 
 int dvc::Device::getExpiration() {

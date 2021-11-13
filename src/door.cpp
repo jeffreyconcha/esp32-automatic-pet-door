@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "motor.h"
+#include "utils.h"
 
 dr::Door::Door(dr::DoorState _initialState, ult::UltraSonic* _proximity) {
     initialState = _initialState;
@@ -35,10 +36,8 @@ void dr::Door::open() {
         if (isStopperEnabled()) {
             delay(500);
         }
-        timeCounter = 0;
-        while (!isStopperEnabled() && !isTimeExpired()) {
+        while (!isStopperEnabled() && !isMaxDurationReached(openingTime)) {
             delay(TIME_DELAY);
-            timeCounter++;
         }
         stop();
         setState(dr::DoorState::OPENED);
@@ -54,10 +53,8 @@ void dr::Door::close() {
             delay(500);
         }
         bool isClear;
-        timeCounter = 0;
-        while ((isClear = proximity->isClear()) && !isStopperEnabled() && !isTimeExpired()) {
+        while ((isClear = proximity->isClear()) && !isStopperEnabled() && !isMaxDurationReached(closingTime)) {
             delay(TIME_DELAY);
-            timeCounter++;
         }
         if (isClear) {
             stop();
@@ -75,24 +72,36 @@ void dr::Door::stop() {
 
 void dr::Door::setState(dr::DoorState _state) {
     state = _state;
+    int64_t duration;
+    std::string log;
     switch (state) {
-    case dr::DoorState::OPENED:
-        Serial.println("***************************** OPENED  *****************************");
-        break;
-    case dr::DoorState::CLOSED:
-        Serial.println("***************************** CLOSED  *****************************");
-        break;
     case dr::DoorState::OPENING:
-        Serial.println("***************************** OPENING *****************************");
+        openingTime = utl::Utils::getCurrentTime();
+        Serial.println("****************** OPENING ******************");
+        break;
+    case dr::DoorState::OPENED:
+        duration = getDuration(openingTime);
+        log = "****************** OPENED -- (DURATION: " + utl::Utils::toString(duration) + ")";
+        Serial.println(log.c_str());
         break;
     case dr::DoorState::CLOSING:
-        Serial.println("***************************** CLOSING *****************************");
+        closingTime = utl::Utils::getCurrentTime();
+        Serial.println("****************** CLOSING ******************");
+        break;
+    case dr::DoorState::CLOSED:
+        duration = getDuration(closingTime);
+        log = "****************** CLOSED -- (DURATION: " + utl::Utils::toString(duration) + ")";
+        Serial.println(log.c_str());
         break;
     }
 }
 
-bool dr::Door::isTimeExpired() {
-    return timeCounter * TIME_DELAY >= MAX_TIME;
+int64_t dr::Door::getDuration(int64_t time) {
+    return utl::Utils::getCurrentTime() - time;
+}
+
+bool dr::Door::isMaxDurationReached(int64_t time) {
+    return getDuration(time) >= MAX_TIME;
 }
 
 bool dr::Door::isOpening() {
