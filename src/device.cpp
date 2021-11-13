@@ -24,7 +24,7 @@ void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
             inRangeCount++;
             std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
             Serial.println(log.c_str());
-            if (inRangeCount >= IN_RANGE_CHECK) {
+            if (inRangeCount >= IN_RANGE_CHECK || rssi >= RSSI_HIGH_THRESHOLD) {
                 forInRangeRechecking = false;
                 inRangeCount = 0;
                 hasBeenInRange = true;
