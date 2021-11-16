@@ -37,6 +37,7 @@ namespace dvc {
     public:
         Device(std::string, int);
         void setRssi(int, bool);
+        void updateChances();
         bool inRange();
         bool hasChance();
         bool isActive();

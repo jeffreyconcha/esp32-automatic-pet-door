@@ -35,6 +35,7 @@ bool isKnownDevicesInRange(int, string);
 bool hasDeviceWithChance();
 bool hasDeviceToOpenFromOutside();
 bool hasDeviceWithUpdate();
+void updateDevicesWithChances();
 void openDoor();
 void closeDoor();
 void removeInactiveDevices();
@@ -112,6 +113,16 @@ bool hasDeviceWithChance() {
     return false;
 }
 
+//Increment interrupted OOR devices if no device detected
+void updateDevicesWithChances() {
+    for (auto const& p : devices) {
+        dvc::Device* device = p.second;
+        if (device->hasChance()) {
+            device->updateChances();
+        }
+    }
+}
+
 void removeInactiveDevices() {
     for (auto const& p : devices) {
         string address = p.first;
@@ -176,6 +187,9 @@ void loop() {
         bool _hasResult = hasResult || !hasDeviceWithUpdate();
         if (!hasDeviceToOpenFromOutside() && proximity->isClear() && _hasResult) {
             closeDoor();
+        }
+        if (!hasResult) {
+            updateDevicesWithChances();
         }
     }
     if (door->isOpened()) {

@@ -45,16 +45,7 @@ void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
             }
         }
     } else {
-        //Device has to be in range first before it can use its 5 chances.
-        if (hasBeenInRange) {
-            outOfRangeCount++;
-            std::string log = "OUT OF RANGE COUNT(" + mac + "): " + utl::Utils::toString(outOfRangeCount);
-            Serial.println(log.c_str());
-            if (outOfRangeCount >= MAX_OOR_COUNT) {
-                hasBeenInRange = false;
-                outOfRangeCount = 0;
-            }
-        }
+        updateChances();
         forInRangeRechecking = false;
         inRangeCount = 0;
     }
@@ -136,4 +127,17 @@ int dvc::Device::getExpiration() {
 
 std::string dvc::Device::getMac() {
     return mac;
+}
+
+void dvc::Device::updateChances() {
+    //Device has to be in range first before it can use its 5 chances.
+    if (hasBeenInRange) {
+        outOfRangeCount++;
+        std::string log = "OUT OF RANGE COUNT(" + mac + "): " + utl::Utils::toString(outOfRangeCount);
+        Serial.println(log.c_str());
+        if (outOfRangeCount >= MAX_OOR_COUNT) {
+            hasBeenInRange = false;
+            outOfRangeCount = 0;
+        }
+    }
 }
