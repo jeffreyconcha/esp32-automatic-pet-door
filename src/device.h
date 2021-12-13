@@ -11,8 +11,8 @@
 #define RSSI_LOW_THRESHOLD -80
 #define MAX_RSSI_RECORD_HISTORY 3
 #define MAX_NO_UPDATE_DURATION 30000
-#define MAX_INACTIVE_TIME 180000
-#define FROM_OUTSIDE_OPEN_DURATION 180000
+#define MAX_INACTIVE_TIME 300000
+#define FROM_OUTSIDE_OPEN_DURATION 60000
 
 namespace dvc {
     class Device {
@@ -29,10 +29,9 @@ namespace dvc {
         bool hasBeenInRange = false;
         bool forInRangeRechecking = false;
         bool hasBadHistory();
-        void updateTime();
         void updateHistory(int);
-        int64_t getAge();
-        int64_t getLastUpdate();
+        int64_t getCreateDuration();
+        int64_t getUpdateDuration();
 
     public:
         Device(std::string, int);

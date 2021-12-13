@@ -17,9 +17,9 @@ using namespace std;
 #define NO_RESULT_DURATION 30
 
 std::map<string, string> tags = {
-    {"ff:ff:aa:05:68:d6", "DAMULAG"},
-    {"ff:ff:bb:b8:a3:3c", "CALI"},
-    {"ff:ff:bb:07:7b:07", "MUNING"},
+    {"ff:ff:aa:05:68:d6", "CALI"},
+    {"ff:ff:bb:07:7b:07", "DAMULAG"},
+    {"ff:ff:18:19:b8:82", "MUNING"},
 };
 
 std::map<string, dvc::Device*> devices;
@@ -79,27 +79,28 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
             }
             dvc::Device* device = devices[mac];
             device->setRssi(rssi, door->isClosed());
-            if (hasDeviceToOpenFromOutside()) {
-                Serial.println("HAS DEVICE OUTSIDE STOPPING SCAN...");
-                isDeviceFound = true;
-                scan->stop();
-            } else {
-                if (device->inRange()) {
+            if (!isDeviceFound) {
+                if (hasDeviceToOpenFromOutside()) {
+                    Serial.println("DEVICE FOUND OUTSIDE!!!");
                     isDeviceFound = true;
-                    scan->stop();
-                    Serial.println("DEVICE FOUND STOPPING SCAN...");
                 } else {
-                    if (door->isOpened() && hasDeviceWithChance()) {
+                    if (device->inRange()) {
                         isDeviceFound = true;
-                        scan->stop();
-                        Serial.println("HAS DEVICE WITH CHANCE STOPPING SCAN...");
+                        Serial.println("DEVICE FOUND!!!");
                     } else {
-                        Serial.println("NO DEVICES IN RANGE...");
+                        if (door->isOpened() && hasDeviceWithChance()) {
+                            isDeviceFound = true;
+                            Serial.println("DEVICE WITH CHANCE FOUND!!!");
+                        } else {
+                            Serial.println("NO DEVICES IN RANGE");
+                        }
                     }
+                }
+                if (isDeviceFound) {
+                    openDoor();
                 }
             }
         }
-        removeInactiveDevices();
     }
 };
 
@@ -177,19 +178,21 @@ void setup() {
 void loop() {
     Serial.println("SCANNING...");
     scan->start(SCAN_DURATION, false);
-    string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
-    Serial.println(result.c_str());
+    removeInactiveDevices();
+    if (hasResult) {
+        string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
+        Serial.println(result.c_str());
+    } else {
+        updateDevicesWithChances();
+        Serial.println("NO DEVICE DETECTED");
+    }
     if (isDeviceFound) {
-        openDoor();
         //RESET THE STATUS
         isDeviceFound = false;
     } else {
         bool _hasResult = hasResult || !hasDeviceWithUpdate();
         if (!hasDeviceToOpenFromOutside() && proximity->isClear() && _hasResult) {
             closeDoor();
-        }
-        if (!hasResult) {
-            updateDevicesWithChances();
         }
     }
     if (door->isOpened()) {

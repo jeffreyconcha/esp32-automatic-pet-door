@@ -8,7 +8,7 @@
 #define MAX_TIME 3000
 #define TIME_DELAY 10
 
-#define STOP_T 0
+#define STOP_T 23
 
 namespace dr {
 

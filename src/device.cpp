@@ -17,8 +17,8 @@ dvc::Device::Device(std::string _mac, int _initialRssi) {
 }
 
 void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
+    timeUpdated = utl::Utils::getCurrentTime();
     rssi = _rssi;
-    updateTime();
     if (rssi >= RSSI_NORMAL_THRESHOLD) {
         if (forInRangeRechecking) {
             inRangeCount++;
@@ -76,10 +76,6 @@ bool dvc::Device::hasBadHistory() {
     return false;
 }
 
-void dvc::Device::updateTime() {
-    timeUpdated = utl::Utils::getCurrentTime();
-}
-
 int dvc::Device::getRssi() {
     return rssi;
 }
@@ -97,30 +93,30 @@ bool dvc::Device::hasChance() {
     }
 }
 
-int64_t dvc::Device::getLastUpdate() {
+int64_t dvc::Device::getUpdateDuration() {
     return utl::Utils::getCurrentTime() - timeUpdated;
 }
 
 bool dvc::Device::isActive() {
-    return getLastUpdate() <= MAX_INACTIVE_TIME;
+    return getUpdateDuration() <= MAX_INACTIVE_TIME;
 }
 
 bool dvc::Device::hasUpdate() {
-    return getLastUpdate() <= MAX_NO_UPDATE_DURATION;
+    return getUpdateDuration() <= MAX_NO_UPDATE_DURATION;
 }
 
 bool dvc::Device::shouldOpenFromOutside() {
-    return outside && getAge() <= FROM_OUTSIDE_OPEN_DURATION;
+    return outside && getCreateDuration() <= FROM_OUTSIDE_OPEN_DURATION;
 }
 
-int64_t dvc::Device::getAge() {
+int64_t dvc::Device::getCreateDuration() {
     return utl::Utils::getCurrentTime() - timeCreated;
 }
 
 int dvc::Device::getExpiration() {
-    int64_t age = getAge();
-    if (age <= FROM_OUTSIDE_OPEN_DURATION) {
-        return (FROM_OUTSIDE_OPEN_DURATION - age) / 1000;
+    int64_t duration = getCreateDuration();
+    if (duration <= FROM_OUTSIDE_OPEN_DURATION) {
+        return (FROM_OUTSIDE_OPEN_DURATION - duration) / 1000;
     }
     return 0;
 }
