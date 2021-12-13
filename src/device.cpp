@@ -6,14 +6,11 @@
 
 #include "utils.h"
 
-dvc::Device::Device(std::string _mac, int _initialRssi) {
+dvc::Device::Device(std::string _mac) {
     mac = _mac;
     timeCreated = utl::Utils::getCurrentTime();
-    if (_initialRssi <= RSSI_LOW_THRESHOLD) {
-        outside = true;
-        std::string log = "DEVICE FOUND OUTSIDE: " + mac + ", @" + utl::Utils::toString(_initialRssi);
-        Serial.println(log.c_str());
-    }
+    std::string log = "NEW DEVICE FOUND OUTSIDE: " + mac;
+    Serial.println(log.c_str());
 }
 
 void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
@@ -39,7 +36,6 @@ void dvc::Device::setRssi(int _rssi, bool isDoorClosed) {
                 inRangeCount = 1;
                 std::string log = "IN RANGE COUNT(" + mac + "): " + utl::Utils::toString(inRangeCount);
             } else {
-                outside = false;
                 hasBeenInRange = true;
                 outOfRangeCount = 0;
             }
@@ -105,20 +101,8 @@ bool dvc::Device::hasUpdate() {
     return getUpdateDuration() <= MAX_NO_UPDATE_DURATION;
 }
 
-bool dvc::Device::shouldOpenFromOutside() {
-    return outside && getCreateDuration() <= FROM_OUTSIDE_OPEN_DURATION;
-}
-
 int64_t dvc::Device::getCreateDuration() {
     return utl::Utils::getCurrentTime() - timeCreated;
-}
-
-int dvc::Device::getExpiration() {
-    int64_t duration = getCreateDuration();
-    if (duration <= FROM_OUTSIDE_OPEN_DURATION) {
-        return (FROM_OUTSIDE_OPEN_DURATION - duration) / 1000;
-    }
-    return 0;
 }
 
 std::string dvc::Device::getMac() {

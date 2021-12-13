@@ -16,6 +16,8 @@ using namespace std;
 #define SCAN_DURATION 10
 #define NO_RESULT_DURATION 30
 
+const BLEUUID SERVICE_UUID("710487f9-e741-4e78-a73f-6cd505bf49cc");
+
 std::map<string, string> tags = {
     {"ff:ff:aa:05:68:d6", "CALI"},
     {"ff:ff:bb:07:7b:07", "DAMULAG"},
@@ -33,13 +35,11 @@ BLEScan* scan;
 
 bool isKnownDevicesInRange(int, string);
 bool hasDeviceWithChance();
-bool hasDeviceToOpenFromOutside();
 bool hasDeviceWithUpdate();
 void updateDevicesWithChances();
 void openDoor();
 void closeDoor();
 void removeInactiveDevices();
-dvc::Device* getDeviceToOpenFromOutside();
 
 bool isDeviceRegistered(string identifier) {
     for (auto const& tag : tags) {
@@ -64,28 +64,29 @@ void closeDoor() {
 
 class ScanCallback : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice ads) {
-        BLEAddress address = ads.getAddress();
-        string mac = address.toString();
-        int rssi = ads.getRSSI();
-        if (isDeviceRegistered(mac)) {
-            hasResult = true;
-            string name = tags[mac];
-            string info = "REGISTERED DEVICE DETECTED: " + mac + " (" + name + "), @" + utl::Utils::toString(rssi);
-            Serial.println("-------------------------------------------------------------");
-            Serial.println(info.c_str());
-            Serial.println("-------------------------------------------------------------");
-            if (devices.find(mac) == devices.end()) {
-                devices[mac] = new dvc::Device(mac, rssi);
-            }
-            dvc::Device* device = devices[mac];
-            device->setRssi(rssi, door->isClosed());
-            if (!isDeviceFound) {
-                if (hasDeviceToOpenFromOutside()) {
-                    Serial.println("DEVICE FOUND OUTSIDE!!!");
-                    isDeviceFound = true;
-                } else {
+        if (ads.haveServiceUUID() && ads.isAdvertisingService(SERVICE_UUID)) {
+            isDeviceFound = true;
+            openDoor();
+        } else {
+            BLEAddress address = ads.getAddress();
+            string mac = address.toString();
+            int rssi = ads.getRSSI();
+            if (isDeviceRegistered(mac)) {
+                hasResult = true;
+                string name = tags[mac];
+                string info = "REGISTERED DEVICE DETECTED: " + mac + " (" + name + "), @" + utl::Utils::toString(rssi);
+                Serial.println("-------------------------------------------------------------");
+                Serial.println(info.c_str());
+                Serial.println("-------------------------------------------------------------");
+                if (devices.find(mac) == devices.end()) {
+                    devices[mac] = new dvc::Device(mac);
+                }
+                dvc::Device* device = devices[mac];
+                device->setRssi(rssi, door->isClosed());
+                if (!isDeviceFound) {
                     if (device->inRange()) {
                         isDeviceFound = true;
+                        openDoor();
                         Serial.println("DEVICE FOUND!!!");
                     } else {
                         if (door->isOpened() && hasDeviceWithChance()) {
@@ -95,9 +96,6 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
                             Serial.println("NO DEVICES IN RANGE");
                         }
                     }
-                }
-                if (isDeviceFound) {
-                    openDoor();
                 }
             }
         }
@@ -114,7 +112,7 @@ bool hasDeviceWithChance() {
     return false;
 }
 
-//Increment interrupted OOR devices if no device detected
+//Increment interrupted OOR devices if no device detected.
 void updateDevicesWithChances() {
     for (auto const& p : devices) {
         dvc::Device* device = p.second;
@@ -128,7 +126,7 @@ void removeInactiveDevices() {
     for (auto const& p : devices) {
         string address = p.first;
         dvc::Device* device = p.second;
-        if (!device->isActive() && !device->shouldOpenFromOutside()) {
+        if (!device->isActive()) {
             string log = "INACTIVE DEVICE: " + address + " (" + tags[address] + ")";
             Serial.println(log.c_str());
             devices.erase(address);
@@ -144,20 +142,6 @@ bool hasDeviceWithUpdate() {
         }
     }
     return false;
-}
-
-bool hasDeviceToOpenFromOutside() {
-    return getDeviceToOpenFromOutside() != 0;
-}
-
-dvc::Device* getDeviceToOpenFromOutside() {
-    for (auto const& p : devices) {
-        dvc::Device* device = p.second;
-        if (device->shouldOpenFromOutside()) {
-            return device;
-        }
-    }
-    return 0;
 }
 
 void setup() {
@@ -187,23 +171,16 @@ void loop() {
         Serial.println("NO DEVICE DETECTED");
     }
     if (isDeviceFound) {
-        //RESET THE STATUS
+        //Always reset the device status for each loop.
         isDeviceFound = false;
     } else {
         bool _hasResult = hasResult || !hasDeviceWithUpdate();
-        if (!hasDeviceToOpenFromOutside() && proximity->isClear() && _hasResult) {
+        if (proximity->isClear() && _hasResult) {
             closeDoor();
         }
     }
     if (door->isOpened()) {
-        dvc::Device* device = getDeviceToOpenFromOutside();
-        if (device != 0) {
-            string log = "** DOOR IS OPEN FOR " + utl::Utils::toString(device->getExpiration()) + " SEC **";
-            Serial.println(log.c_str());
-
-        } else {
-            Serial.println("** DOOR IS OPEN **");
-        }
+        Serial.println("** DOOR IS OPEN **");
     } else {
         Serial.println("** DOOR IS CLOSE **");
     }
