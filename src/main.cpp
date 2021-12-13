@@ -37,9 +37,9 @@ bool isKnownDevicesInRange(int, string);
 bool hasDeviceWithChance();
 bool hasDeviceWithUpdate();
 void updateDevicesWithChances();
+void removeInactiveDevices();
 void openDoor();
 void closeDoor();
-void removeInactiveDevices();
 
 bool isDeviceRegistered(string identifier) {
     for (auto const& tag : tags) {
@@ -65,6 +65,7 @@ void closeDoor() {
 class ScanCallback : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice ads) {
         if (ads.haveServiceUUID() && ads.isAdvertisingService(SERVICE_UUID)) {
+            Serial.println("DEVICE FOUND OUTSIDE!!!");
             isDeviceFound = true;
             openDoor();
         } else {

@@ -9,7 +9,7 @@
 dvc::Device::Device(std::string _mac) {
     mac = _mac;
     timeCreated = utl::Utils::getCurrentTime();
-    std::string log = "NEW DEVICE FOUND OUTSIDE: " + mac;
+    std::string log = "NEW DEVICE FOUND: " + mac;
     Serial.println(log.c_str());
 }
 
@@ -85,7 +85,9 @@ bool dvc::Device::hasChance() {
         Serial.println("UNABLE TO USE CHANCES DUE TO IN RANGE RECHECKING...");
         return false;
     } else {
-        return hasBeenInRange && outOfRangeCount <= MAX_OOR_COUNT;
+        return hasBeenInRange &&
+               outOfRangeCount <= MAX_OOR_COUNT &&
+               getUpdateDuration() + (outOfRangeCount * UPDATE_INTERVAL) <= MAX_OOR_DURATION;
     }
 }
 
