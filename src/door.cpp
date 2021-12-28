@@ -31,12 +31,16 @@ void dr::Door::init() {
 void dr::Door::open() {
     if (state != dr::DoorState::OPENED && state != dr::DoorState::OPENING) {
         setState(dr::DoorState::OPENING);
-        motorA->forward(200);
-        motorB->forward(200);
+        motorA->forward(150);
+        motorB->forward(150);
         if (isStopperEnabled()) {
             delay(500);
         }
         while (!isStopperEnabled() && !isMaxDurationReached(openingTime)) {
+            if (getDuration(openingTime) >= TIME_BOOST) {
+                motorA->forward(170);
+                motorB->forward(170);
+            }
             delay(TIME_DELAY);
         }
         stop();
@@ -47,8 +51,8 @@ void dr::Door::open() {
 void dr::Door::close() {
     if (state != dr::DoorState::CLOSED && state != dr::DoorState::CLOSING) {
         setState(dr::DoorState::CLOSING);
-        motorA->reverse(75);
-        motorB->reverse(75);
+        motorA->reverse(80);
+        motorB->reverse(80);
         if (isStopperEnabled()) {
             delay(500);
         }

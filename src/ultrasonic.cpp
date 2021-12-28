@@ -16,16 +16,27 @@ float ult::UltraSonic::readDistance() {
     digitalWrite(TRIGGER_PIN, LOW);
     long duration = pulseIn(ECHO_PIN, HIGH);
     float distance = duration * (SPEED_OF_SOUND / 2);
-    return distance;
+    if (lastDistance > 0) {
+        float difference = lastDistance - distance;
+        float value = abs(difference);
+        lastDistance = distance;
+        if (value <= ALLOWANCE) {
+            return distance;
+        }
+        return 0;
+    }
+    return lastDistance = distance;
 }
 
 bool ult::UltraSonic::isClear() {
     float distance = readDistance();
-    if (distance > 0) {
+    std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
+    Serial.println(log.c_str());
+    if (distance > 0 && distance < 1000) {
         bool isClear = distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
         if (!isClear) {
-            std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
-            Serial.println(log.c_str());
+            // std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
+            // Serial.println(log.c_str());
         }
         return isClear;
     }

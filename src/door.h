@@ -5,7 +5,8 @@
 
 #ifndef DOOR_H
 #define DOOR_H
-#define MAX_TIME 3000
+#define MAX_TIME 5000
+#define TIME_BOOST 4000
 #define TIME_DELAY 10
 
 #define STOP_T 23

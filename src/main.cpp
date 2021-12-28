@@ -15,20 +15,24 @@ using namespace std;
 
 #define SCAN_DURATION 10
 #define NO_RESULT_DURATION 30
+#define MAX_PROXIMITY_OPENED_DURATION 5000
 
 const BLEUUID SERVICE_UUID("710487f9-e741-4e78-a73f-6cd505bf49cc");
 
 std::map<string, string> tags = {
+    {"ff:ff:aa:05:6a:03", "MUNING"},
     {"ff:ff:aa:05:68:d6", "CALI"},
     {"ff:ff:bb:07:7b:07", "DAMULAG"},
-    {"ff:ff:18:19:b8:82", "MUNING"},
+    {"ff:ff:18:19:b8:82", "DEPAN"},
 };
 
 std::map<string, dvc::Device*> devices;
+int64_t timeOpenedByProximity = 0;
 int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isDoorOpen = false;
 bool hasResult = false;
+TaskHandle_t task;
 ult::UltraSonic* proximity;
 dr::Door* door;
 BLEScan* scan;
@@ -40,6 +44,8 @@ void updateDevicesWithChances();
 void removeInactiveDevices();
 void openDoor();
 void closeDoor();
+void runnable(void*);
+int64_t getOpenedByProximityDuration();
 
 bool isDeviceRegistered(string identifier) {
     for (auto const& tag : tags) {
@@ -158,6 +164,7 @@ void setup() {
     scan->setActiveScan(true);
     scan->setInterval(250);
     scan->setWindow(250);
+    xTaskCreatePinnedToCore(runnable, "Task", 10000, NULL, 0, &task, 0);
 }
 
 void loop() {
@@ -176,7 +183,7 @@ void loop() {
         isDeviceFound = false;
     } else {
         bool _hasResult = hasResult || !hasDeviceWithUpdate();
-        if (proximity->isClear() && _hasResult) {
+        if (proximity->isClear() && _hasResult && getOpenedByProximityDuration() > MAX_PROXIMITY_OPENED_DURATION) {
             closeDoor();
         }
     }
@@ -187,4 +194,20 @@ void loop() {
     }
     scan->clearResults();
     hasResult = false;
+}
+
+int64_t getOpenedByProximityDuration() {
+    return utl::Utils::getCurrentTime() - timeOpenedByProximity;
+}
+
+void runnable(void* params) {
+    while (true) {
+        if (door->isClosed()) {
+            if (!proximity->isClear()) {
+                timeOpenedByProximity = utl::Utils::getCurrentTime();
+                openDoor();
+            }
+        }
+        delay(100);
+    }
 }
