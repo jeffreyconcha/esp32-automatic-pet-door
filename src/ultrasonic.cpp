@@ -29,7 +29,7 @@ bool ult::UltraSonic::isClear() {
     std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
     Serial.println(log.c_str());
     if (distance > 0 && distance < 1000) {
-        // return isClear(distance);
+        return isClear(distance);
     }
     return true;
 }
