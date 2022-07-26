@@ -9,23 +9,19 @@ void ult::UltraSonic::init() {
 }
 
 float ult::UltraSonic::readDistance() {
-    digitalWrite(TRIGGER_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIGGER_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIGGER_PIN, LOW);
-    long duration = pulseIn(ECHO_PIN, HIGH);
-    float distance = duration * (SPEED_OF_SOUND / 2);
-    if (lastDistance > 0) {
-        float difference = lastDistance - distance;
-        float value = abs(difference);
-        lastDistance = distance;
-        if (value <= ALLOWANCE) {
-            return distance;
-        }
-        return 0;
+    float total = 0;
+    for (int i = 0; i < READING_COUNT; i++) {
+        digitalWrite(TRIGGER_PIN, LOW);
+        delayMicroseconds(2);
+        digitalWrite(TRIGGER_PIN, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(TRIGGER_PIN, LOW);
+        long duration = pulseIn(ECHO_PIN, HIGH);
+        float distance = duration * (SPEED_OF_SOUND / 2);
+        return distance;
+        total += distance;
     }
-    return lastDistance = distance;
+    return total / READING_COUNT;
 }
 
 bool ult::UltraSonic::isClear() {
@@ -33,12 +29,16 @@ bool ult::UltraSonic::isClear() {
     std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
     Serial.println(log.c_str());
     if (distance > 0 && distance < 1000) {
-        bool isClear = distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
-        if (!isClear) {
-            // std::string log = "DISTANCE (cm): " + utl::Utils::toString(distance);
-            // Serial.println(log.c_str());
-        }
-        return isClear;
+        // return isClear(distance);
     }
     return true;
+}
+
+bool ult::UltraSonic::isClear(float distance) {
+    bool isClear = distance >= MIN_DISTANCE && distance <= MAX_DISTANCE;
+    if (!isClear) {
+        std::string log = "OBJECT DETECTED @DISTANCE (cm): " + utl::Utils::toString(distance);
+        Serial.println(log.c_str());
+    }
+    return isClear;
 }

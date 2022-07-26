@@ -5,13 +5,13 @@
 #define ECHO_PIN 33
 #define SPEED_OF_SOUND 0.034
 #define MIN_DISTANCE 45
-#define MAX_DISTANCE 75
-#define ALLOWANCE 5
+#define MAX_DISTANCE 49
+#define READING_COUNT 7
 
 namespace ult {
     class UltraSonic {
     private:
-        float lastDistance = 0;
+        bool isClear(float);
 
     public:
         void init();
