@@ -4,9 +4,9 @@
 #define TRIGGER_PIN 32
 #define ECHO_PIN 33
 #define SPEED_OF_SOUND 0.034
-#define MIN_DISTANCE 45
-#define MAX_DISTANCE 49
-#define READING_COUNT 7
+#define MIN_DISTANCE 40
+#define MAX_DISTANCE 60
+#define READING_COUNT 20
 
 namespace ult {
     class UltraSonic {

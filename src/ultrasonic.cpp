@@ -18,7 +18,6 @@ float ult::UltraSonic::readDistance() {
         digitalWrite(TRIGGER_PIN, LOW);
         long duration = pulseIn(ECHO_PIN, HIGH);
         float distance = duration * (SPEED_OF_SOUND / 2);
-        return distance;
         total += distance;
     }
     return total / READING_COUNT;

@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include "ESPAsyncWebServer.h"
+#include "WiFi.h"
 #include "device.h"
 #include "door.h"
 #include "ultrasonic.h"
@@ -18,15 +20,17 @@ using namespace std;
 #define PROXIMITY_OPENED_DURATION 5000
 #define MAX_NO_BLACKLIST_NEARBY_DURATION 10000
 
+const char* SSID = "SKYbroadband224B";
+const char* PASSWORD = "086329969";
 const BLEUUID SERVICE_UUID("710487f9-e741-4e78-a73f-6cd505bf49cc");
 
 std::map<string, string> tags = {
-    {"ff:ff:aa:05:68:d6", "CALI"},
-    {"ff:ff:bb:07:7b:07", "DAMULAG"},
-    {"ff:ff:18:19:b8:82", "DEPAN"},
+    {"ff:ff:10:3a:4f:2a", "CALI"},
+    {"ff:ff:10:3a:50:9d", "DAMULAG"},
 };
 
 std::map<string, string> blacklist = {
+    {"ff:ff:aa:05:68:d6", "CHONKI"},
     {"ff:ff:aa:05:6a:03", "CHAKO"},
 };
 
@@ -40,6 +44,7 @@ bool isBlacklistedFound = false;
 bool isDoorOpen = false;
 bool hasResult = false;
 TaskHandle_t task;
+AsyncWebServer server(80);
 ult::UltraSonic* proximity;
 dr::Door* door;
 BLEScan* scan;
@@ -188,6 +193,24 @@ bool hasDeviceWithUpdate() {
 void setup() {
     Serial.begin(115200);
     Serial.println("INITIALIZING...");
+    WiFi.begin(SSID, PASSWORD);
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.println("CONNECTING TO WIFI...");
+        delay(1000);
+    }
+    Serial.println("WIFI CONNECTED!!!");
+    Serial.println(WiFi.localIP());
+    server.on("open", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // openDoor();
+        request->send(200, "text/plan", "ok");
+        Serial.println("WEB SERVER COMMAND: OPEN DOOR");
+    });
+    server.on("close", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // closeDoor();
+        request->send(200, "text/plan", "ok");
+        Serial.println("WEB SERVER COMMAND: CLOSE DOOR");
+    });
+    //-------------------BLUETOOTH--------------------//
     BLEDevice::init("ESP32-38");
     proximity = new ult::UltraSonic();
     proximity->init();
@@ -249,7 +272,8 @@ int64_t getTimeFromLastBlacklistCheck() {
 
 void runnable(void* parameter) {
     for (;;) {
-        if (door->isClosed()) {
+        // if (door->isClosed()) {
+        if (door->isClosing()) {
             ult::UltraSonic* sensor = (ult::UltraSonic*)parameter;
             if (!sensor->isClear()) {
                 if (!isBlacklistedFound) {
