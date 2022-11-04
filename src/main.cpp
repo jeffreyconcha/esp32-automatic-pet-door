@@ -24,6 +24,12 @@ const char* SSID = "SKYbroadband224B";
 const char* PASSWORD = "086329969";
 const BLEUUID SERVICE_UUID("710487f9-e741-4e78-a73f-6cd505bf49cc");
 
+enum ServerCommand {
+    OPEN,
+    CLOSE,
+    IDLE,
+};
+
 std::map<string, string> tags = {
     {"ff:ff:10:3a:4f:2a", "CALI"},
     {"ff:ff:10:3a:50:9d", "DAMULAG"},
@@ -34,14 +40,17 @@ std::map<string, string> blacklist = {
     {"ff:ff:aa:05:6a:03", "CHAKO"},
 };
 
+ServerCommand command = IDLE;
 std::map<string, dvc::Device*> devices;
 int64_t timeOpenedByProximity = 0;
 int64_t timeOfLastBlacklistCheck = 0;
+int64_t timeOpenedByServer = 0;
+long openDuration = 0;
 int blacklistCheck = 0;
 int scanDuration = SCAN_DURATION;
 bool isDeviceFound = false;
 bool isBlacklistedFound = false;
-bool isDoorOpen = false;
+bool isDoorOpenedByServer = false;
 bool hasResult = false;
 TaskHandle_t task;
 AsyncWebServer server(80);
@@ -57,7 +66,8 @@ void updateDevicesWithChances();
 void removeInactiveDevices();
 void openDoor();
 void closeDoor();
-void runnable(void*);
+void runnableTask(void*);
+int64_t getOpenedByServerDuration();
 int64_t getOpenedByProximityDuration();
 int64_t getTimeFromLastBlacklistCheck();
 
@@ -200,16 +210,21 @@ void setup() {
     }
     Serial.println("WIFI CONNECTED!!!");
     Serial.println(WiFi.localIP());
-    server.on("open", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // openDoor();
-        request->send(200, "text/plan", "ok");
+    server.on("/open", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (request->hasArg("duration")) {
+            String duration = request->arg("duration");
+            openDuration = duration.toInt();
+        }
+        request->send(200, "text/json", "{status: \"ok\"}");
         Serial.println("WEB SERVER COMMAND: OPEN DOOR");
+        command = OPEN;
     });
-    server.on("close", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // closeDoor();
-        request->send(200, "text/plan", "ok");
+    server.on("/close", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send(200, "text/json", "{status: \"ok\"}");
         Serial.println("WEB SERVER COMMAND: CLOSE DOOR");
+        command = CLOSE;
     });
+    server.begin();
     //-------------------BLUETOOTH--------------------//
     BLEDevice::init("ESP32-38");
     proximity = new ult::UltraSonic();
@@ -221,45 +236,63 @@ void setup() {
     scan->setActiveScan(true);
     scan->setInterval(250);
     scan->setWindow(250);
-    xTaskCreatePinnedToCore(runnable, "Task", 10000, (void*)&proximity, 1, &task, 1);
+    xTaskCreatePinnedToCore(runnableTask, "Task", 10000, (void*)&proximity, 1, &task, 1);
 }
 
 void loop() {
-    Serial.println("SCANNING...");
-    scan->start(SCAN_DURATION, false);
-    removeInactiveDevices();
-    if (hasResult) {
-        string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
-        Serial.println(result.c_str());
-    } else {
-        updateDevicesWithChances();
-        Serial.println("NO DEVICE DETECTED");
-    }
-    if (isDeviceFound) {
-        // Always reset the device status for each loop.
-        isDeviceFound = false;
-    } else {
-        bool _hasResult = hasResult || !hasDeviceWithUpdate();
-        if (proximity->isClear() && _hasResult &&
-            getOpenedByProximityDuration() > PROXIMITY_OPENED_DURATION + MAX_TIME) {
-            closeDoor();
+    if (!isDoorOpenedByServer) {
+        Serial.println("SCANNING...");
+        scan->start(SCAN_DURATION, false);
+        // Need to check again since scanning has delay
+        if (!isDoorOpenedByServer) {
+            removeInactiveDevices();
+            if (hasResult) {
+                string result = "SCAN RESULT: " + utl::Utils::toString(isDeviceFound);
+                Serial.println(result.c_str());
+            } else {
+                updateDevicesWithChances();
+                Serial.println("NO DEVICE DETECTED");
+            }
+            if (isDeviceFound) {
+                // Always reset the device status for each loop.
+                isDeviceFound = false;
+            } else {
+                bool _hasResult = hasResult || !hasDeviceWithUpdate();
+                if (proximity->isClear() && _hasResult &&
+                    getOpenedByProximityDuration() > PROXIMITY_OPENED_DURATION + MAX_TIME) {
+                    closeDoor();
+                }
+                Serial.println("IS CLEAR");
+                Serial.println(proximity->isClear());
+                Serial.println(proximity->readDistance());
+            }
+            if (door->isOpened()) {
+                Serial.println("** DOOR IS OPEN **");
+            } else {
+                Serial.println("** DOOR IS CLOSE **");
+            }
+            if (isBlacklistedFound) {
+                Serial.println("** BLACKLISTED NEARBY **");
+            } else {
+                Serial.println("** NO BLACKLISTED NEARBY **");
+            }
+            scan->clearResults();
+            hasResult = false;
         }
-        Serial.println("IS CLEAR");
-        Serial.println(proximity->isClear());
-        Serial.println(proximity->readDistance());
-    }
-    if (door->isOpened()) {
-        Serial.println("** DOOR IS OPEN **");
     } else {
-        Serial.println("** DOOR IS CLOSE **");
+        int64_t duration = getOpenedByServerDuration();
+        string info = "OPEN STATUS: " + utl::Utils::toString(duration) + " vs " + utl::Utils::toString(openDuration);
+        Serial.println(info.c_str());
+        if (duration >= openDuration) {
+            closeDoor();
+            isDoorOpenedByServer = false;
+        }
+        delay(1000);
     }
-    if (isBlacklistedFound) {
-        Serial.println("** BLACKLISTED NEARBY **");
-    } else {
-        Serial.println("** NO BLACKLISTED NEARBY **");
-    }
-    scan->clearResults();
-    hasResult = false;
+}
+
+int64_t getOpenedByServerDuration() {
+    return utl::Utils::getCurrentTime() - timeOpenedByServer;
 }
 
 int64_t getOpenedByProximityDuration() {
@@ -270,9 +303,8 @@ int64_t getTimeFromLastBlacklistCheck() {
     return utl::Utils::getCurrentTime() - timeOfLastBlacklistCheck;
 }
 
-void runnable(void* parameter) {
+void runnableTask(void* parameter) {
     for (;;) {
-        // if (door->isClosed()) {
         if (door->isClosing()) {
             ult::UltraSonic* sensor = (ult::UltraSonic*)parameter;
             if (!sensor->isClear()) {
@@ -281,6 +313,26 @@ void runnable(void* parameter) {
                     openDoor();
                 } else {
                     Serial.println("UNABLE TO OPEN DOOR, BLACKLISTED FOUND!!!");
+                }
+            }
+        } else {
+            if (command != IDLE) {
+                string info;
+                switch (command) {
+                case OPEN:
+                    scan->stop();
+                    openDoor();
+                    timeOpenedByServer = utl::Utils::getCurrentTime();
+                    isDoorOpenedByServer = true;
+                    info = "OPEN DURATION: " + utl::Utils::toString(openDuration);
+                    Serial.println(info.c_str());
+                    command = IDLE;
+                    break;
+                case CLOSE:
+                    closeDoor();
+                    isDoorOpenedByServer = false;
+                    command = IDLE;
+                    break;
                 }
             }
         }
